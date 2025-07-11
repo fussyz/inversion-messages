@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'   // ← страница — серверная
+export const dynamic = 'force-dynamic'     // ← серверная, без SSG
 
 import CallbackClient from './CallbackClient'
 
