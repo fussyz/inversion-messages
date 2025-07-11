@@ -1,104 +1,136 @@
 'use client'
 
-import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useState, useMemo } from 'react'
 import { nanoid } from 'nanoid'
-import { QRCodeCanvas as QRCode } from 'qrcode.react'
+import { createClient } from '@supabase/supabase-js'
+import { QRCodeCanvas } from 'qrcode.react'
 
+// 1 ─ браузерный Supabase-клиент
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 )
 
 export default function Admin() {
-  const [file, setFile]         = useState<File>()
-  const [autoDel, setAutoDel]   = useState(true)   // удалить сразу
-  const [forever, setForever]   = useState(false)  // хранить вечно
-  const [days, setDays]         = useState(7)      // если не forever
-  const [busy, setBusy]         = useState(false)
-  const [err, setErr]           = useState<string|null>(null)
-  const [fullURL, setFullURL]   = useState('')
+  /* form-state */
+  const [file, setFile]   = useState<File | null>(null)
+  const [autoDel, setAD]  = useState(false)
+  const [forever, setFor] = useState(false)
+  const [days, setDays]   = useState(1)
 
+  /* ui-state */
+  const [busy, setBusy]   = useState(false)
+  const [err,  setErr]    = useState('')
+  const [fullURL, setFullURL] = useState('')
+
+  /*  генерируем id один раз на монт */
+  const id = useMemo(() => nanoid(10), [])
+
+  /* submit */
   async function handle(e: React.FormEvent) {
     e.preventDefault()
-    setErr(null)
-    if (!file) { setErr('Выберите файл'); return }
+    if (!file) { setErr('Файл не выбран'); return }
 
-    setBusy(true)
+    setBusy(true); setErr('')
 
-    const id   = nanoid(8)
-    const ext  = (file.name.split('.').pop() || 'jpg')
-    const path = `msg-${id}.${ext}`
+    /* 1 ─ кладём картинку в bucket images/msg-<id>.jpg */
+    const { error: upErr } = await sb
+      .storage
+      .from('images')
+      .upload(`msg-${id}.jpg`, file, { upsert: false })
 
-    /* upload */
-    const up = await sb.storage.from('images').upload(path, file, { upsert:true })
-    if (up.error) { setErr(up.error.message); setBusy(false); return }
+    if (upErr) { setErr(upErr.message); setBusy(false); return }
 
-    /* подписанный URL (30 дней) */
-    const { data:signed, error:signErr } =
-      await sb.storage.from('images').createSignedUrl(path, 60*60*24*30)
+    /* 2 ─ получаем signedURL (1 год) */
+    const { data: signed, error: signErr } = await sb
+      .storage
+      .from('images')
+      .createSignedUrl(`msg-${id}.jpg`, 60 * 60 * 24 * 365)
+
     if (signErr) { setErr(signErr.message); setBusy(false); return }
 
-    /* days_to_live */
-    const days_to_live =
-      autoDel ? null : (forever ? null : days > 0 ? days : null)
+    /* 3 ─ готовим days_to_live */
+    const days_to_live = autoDel || forever ? null : days > 0 ? days : null
 
-    /* insert row */
-    const ins = await sb.from('messages').insert({
+    /* 4 ─ записываем строку в messages */
+    const { error: insErr } = await sb.from('messages').insert({
       id,
       image_url   : signed!.signedUrl,
       auto_delete : autoDel,
       days_to_live,
-      expire_at   : null
+      expire_at   : null,
     })
-    if (ins.error) { setErr(ins.error.message); setBusy(false); return }
 
+    if (insErr) { setErr(insErr.message); setBusy(false); return }
+
+    /* 5 ─ показываем готовую ссылку/QR */
     setFullURL(`${window.location.origin}/message/${id}`)
     setBusy(false)
   }
 
   return (
-    <main style={{background:'#000',color:'#fff',minHeight:'100vh',padding:'2rem'}}>
-      <h1 style={{fontSize:'1.8rem',marginBottom:'1rem'}}>🛠 Upload message</h1>
+    <main className="min-h-screen bg-black text-white py-10 px-6">
+      <h1 className="text-xl mb-6">🎛 Upload message</h1>
 
-      <form onSubmit={handle} style={{display:'flex',flexDirection:'column',gap:'1rem',maxWidth:'22rem'}}>
-        <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0])} />
+      <form onSubmit={handle} className="flex flex-col gap-4 max-w-md">
+        {/* файл */}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={e => setFile(e.target.files?.[0] ?? null)}
+          className="text-sm"
+        />
 
-        <label>
-          <input type="checkbox" checked={autoDel} onChange={()=>setAutoDel(!autoDel)}/>
-          &nbsp;Удалить после первого просмотра
+        {/* автоудаление */}
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={autoDel}
+            onChange={e => setAD(e.target.checked)}
+          />
+          Удалить сразу после просмотра
         </label>
 
-        {!autoDel && (
-          <>
-            <label>
-              <input type="checkbox" checked={forever} onChange={()=>setForever(!forever)}/>
-              &nbsp;Хранить вечно
-            </label>
+        {/* срок хранения */}
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={forever}
+            onChange={e => setFor(e.target.checked)}
+          />
+          Хранить вечно
+        </label>
 
-            {!forever && (
-              <label>
-                Сколько&nbsp;дней хранить:&nbsp;
-                <input type="number" min="1" value={days}
-                       onChange={e=>setDays(Number(e.target.value||1))}
-                       style={{width:'5rem'}} />
-              </label>
-            )}
-          </>
+        {!forever && !autoDel && (
+          <div className="flex items-center gap-2">
+            <span>Сколько дней хранить:</span>
+            <input
+              type="number"
+              min={0}
+              value={days}
+              onChange={e => setDays(+e.target.value)}
+              className="w-20 px-2 py-1 bg-gray-100 text-black
+                         placeholder-gray-400 focus:outline-none focus:ring"
+              placeholder="0 = ∞"
+            />
+          </div>
         )}
 
-        <button type="submit" disabled={busy}
-                style={{padding:'0.5rem 1rem',border:'1px solid #fff',cursor:'pointer'}}>
-          {busy ? 'Uploading…' : 'Upload'}
+        <button
+          disabled={busy}
+          className="border px-4 py-2 hover:bg-white hover:text-black disabled:opacity-50"
+        >
+          {busy ? 'Загружаю…' : 'Загрузить'}
         </button>
       </form>
 
-      {err && <p style={{color:'red'}}>⚠️ {err}</p>}
+      {err && <p className="mt-4 text-red-400">{err}</p>}
 
+      {/* QR + ссылка после загрузки */}
       {fullURL && (
-        <div style={{marginTop:'2rem'}}>
-          <p><a href={fullURL} style={{color:'#0af'}} target="_blank">{fullURL}</a></p>
-          <QRCode value={fullURL} size={180} bgColor="#000" fgColor="#fff"/>
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <QRCodeCanvas value={fullURL} size={200} bgColor="#000" fgColor="#fff" />
+          <a href={fullURL} className="underline break-all text-blue-300">{fullURL}</a>
         </div>
       )}
     </main>
