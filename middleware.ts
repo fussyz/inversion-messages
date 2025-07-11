@@ -1,25 +1,23 @@
-// middleware.ts  (корень)
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createMiddlewareSupabaseClient } from '@supabase/auth-helpers-nextjs'
 
+/* Пути, куда пускаем без логина */
 const PUBLIC = ['/signin', '/auth/callback', '/favicon.ico']
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const sb  = createMiddlewareSupabaseClient({ req, res })
-  const { data: { session } } = await sb.auth.getSession()
+export function middleware(req: NextRequest) {
+  const token = req.cookies.get('sb-access-token')?.value
+  const path  = req.nextUrl.pathname
+  const open  = PUBLIC.some(p => path.startsWith(p))
 
-  const path = req.nextUrl.pathname
-  const open = PUBLIC.some(p => path.startsWith(p))
-
-  if (!session && !open) {
+  /* Нет токена и путь не публичный → редирект на /signin */
+  if (!token && !open) {
     const url = req.nextUrl.clone()
     url.pathname = '/signin'
     url.searchParams.set('returnTo', path)
     return NextResponse.redirect(url)
   }
-  return res
+
+  return NextResponse.next()
 }
 
 export const config = {
