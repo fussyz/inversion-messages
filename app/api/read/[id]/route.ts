@@ -6,25 +6,29 @@ export async function PUT(_req: Request, { params }:{params:{id:string}}) {
 
   const { data } = await supabase
     .from('messages')
-    .select('auto_delete, days_to_live, expire_at')
+    .select('*')                 // тянем всё, нужен views & days_to_live
     .eq('id', id)
     .single()
 
   if (!data) return NextResponse.json({ ok:false })
 
-  /* первый просмотр → рассчитываем expire_at, если нужно */
+  /* первый просмотр → вычисляем expire_at */
   if (!data.expire_at && !data.auto_delete && data.days_to_live) {
-    const expire = new Date(Date.now() + data.days_to_live*24*60*60_000).toISOString()
-    await supabase.from('messages').update({ expire_at: expire }).eq('id', id)
+    const expire = new Date(Date.now()+data.days_to_live*86_400_000).toISOString()
+    await supabase.from('messages').update({ expire_at:expire }).eq('id', id)
   }
 
-  /* auto-delete или просрочка */
+  /* статистика */
+  await supabase.from('messages').update({
+    views: (data.views ?? 0) + 1,
+    last_read_at: new Date().toISOString()
+  }).eq('id', id)
+
+  /* удаление */
   const expired = data.expire_at && new Date(data.expire_at) < new Date()
 
   if (data.auto_delete || expired) {
     await supabase.from('messages').delete().eq('id', id)
-  } else {
-    await supabase.from('messages').update({ is_read:true }).eq('id', id)
   }
 
   return NextResponse.json({ ok:true })

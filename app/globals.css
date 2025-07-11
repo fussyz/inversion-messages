@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* глич-анимация */
+@keyframes glitch {
+  2%,64%   { transform: translate(2px,0)  skew(0deg); }
+  4%,60%   { transform: translate(-2px,0) skew(0deg); }
+  62%      { transform: translate(0,0)    skew(5deg); }
+}
+.glitch {
+  position: relative;
+  animation: glitch 1s infinite;
+}
+.glitch::before,
+.glitch::after{
+  content: attr(data-text);
+  position: absolute; inset: 0;
+}
+.glitch::before { left:2px;  text-shadow:-2px 0 red;  }
+.glitch::after  { left:-2px; text-shadow:-2px 0 cyan; }
