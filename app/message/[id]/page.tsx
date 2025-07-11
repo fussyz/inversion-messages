@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { notFound } from 'next/navigation'
-import MessageView from '@/app/message/MessageView'
-import { supabase } from '@/lib/supabase-server'
+import MessageView        from '../MessageView'
+import { supabase }       from '../../lib/supabase-server'
 
 export default async function Page({ params }: any) {
   const id = params.id as string
