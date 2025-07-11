@@ -1,25 +1,18 @@
-import { supabase } from '@/lib/supabase'
-import MessageView   from '../MessageView'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { notFound } from 'next/navigation'
+import MessageView from '@/app/message/MessageView'
+import { supabase } from '@/lib/supabase-server'
 
-export default async function Page({ params }:{params:{id:string}}) {
-  const id = params.id
+export default async function Page({ params }: any) {
+  const id = params.id as string
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('messages')
-    .select('image_url, expire_at')
+    .select('image_url')
     .eq('id', id)
     .single()
 
-  const expired = data?.expire_at && new Date(data.expire_at) < new Date()
+  if (!data) notFound()
 
-  if (error || !data || expired) {
-    return (
-      <div style={{background:'#000',color:'red',minHeight:'100vh',
-                   display:'flex',justifyContent:'center',alignItems:'center'}}>
-        Message not found
-      </div>
-    )
-  }
-
-  return <MessageView id={id} url={data.image_url}/>
+  return <MessageView id={id} url={data.image_url} />
 }
