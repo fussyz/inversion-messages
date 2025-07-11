@@ -1,6 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export async function PUT(
   request: Request,
   context: any
