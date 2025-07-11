@@ -2,8 +2,8 @@ import { NextResponse, NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: Request,
+  context: any
 ) {
   const { id } = params
 
