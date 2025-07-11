@@ -31,9 +31,15 @@ export default function SignIn() {
                   display:'flex',flexDirection:'column',
                   alignItems:'center',justifyContent:'center',gap:'1rem'}}>
       <form onSubmit={handle} style={{display:'flex',gap:'0.5rem'}}>
-        <input type="email" required placeholder="you@mail.com"
-               value={email} onChange={e=>setEmail(e.target.value)}
-               style={{padding:'0.5rem'}} />
+        <input
+  type="email"
+  required
+  placeholder="you@mail.com"
+  value={email}
+  onChange={e => setEmail(e.target.value)}
+  className="px-3 py-2 text-black bg-gray-100 focus:outline-none focus:ring
+             placeholder-gray-400"
+/>
         <button style={{padding:'0.5rem 1rem',border:'1px solid #fff'}}>
           Send link
         </button>
