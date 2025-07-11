@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { notFound } from 'next/navigation'
 import MessageView from '@/app/message/MessageView'
 import { supabase } from '@/lib/supabase-server'

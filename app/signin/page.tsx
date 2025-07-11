@@ -1,5 +1,4 @@
 'use client'
-
 import { useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -14,36 +13,36 @@ export default function SignIn() {
 
   async function handle(e: React.FormEvent) {
     e.preventDefault()
-    if (!email) return
-
     const { error } = await sb.auth.signInWithOtp({
       email,
-      /* ВАЖНО: именно emailRedirectTo — тогда
-         Supabase добавит токены к ссылке        */
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+      options: {
+        // жёстко указываем боевой домен,
+        // чтобы в письме формировался 100 % корректный линк
+        emailRedirectTo: 'https://www.inversion.one/auth/callback',
+      },
     })
-
-    setMsg(error ? error.message : '🔗 Ссылка-логин отправлена на почту')
+    setMsg(error ? error.message : '🔗 Ссылка отправлена')
   }
 
   return (
-    <main style={{background:'#000',color:'#fff',minHeight:'100vh',
-                  display:'flex',flexDirection:'column',
-                  alignItems:'center',justifyContent:'center',gap:'1rem'}}>
-      <form onSubmit={handle} style={{display:'flex',gap:'0.5rem'}}>
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black text-white">
+      <h1 className="text-xl">Вход в админ-панель</h1>
+
+      <form onSubmit={handle} className="flex gap-2">
         <input
-  type="email"
-  required
-  placeholder="you@mail.com"
-  value={email}
-  onChange={e => setEmail(e.target.value)}
-  className="px-3 py-2 text-black bg-gray-100 focus:outline-none focus:ring
-             placeholder-gray-400"
-/>
-        <button style={{padding:'0.5rem 1rem',border:'1px solid #fff'}}>
+          type="email"
+          required
+          placeholder="you@mail.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="px-3 py-2 text-black bg-gray-100 placeholder-gray-400
+                     focus:outline-none focus:ring"
+        />
+        <button className="border px-4 py-2 hover:bg-white hover:text-black">
           Send link
         </button>
       </form>
+
       {msg && <p>{msg}</p>}
     </main>
   )
