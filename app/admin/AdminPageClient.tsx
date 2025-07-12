@@ -31,6 +31,7 @@ type MessageRow = {
   views: number
   last_read_at: string | null
   client_ip: string | null
+  created_at: string
 }
 
 export default function AdminPageClient() {
@@ -40,19 +41,24 @@ export default function AdminPageClient() {
   const [deleteOnRead, setDelete] = useState(false)
   const [loading, setLoading]     = useState(false)
 
-  // для модалки
+  // сортировка по дате создания
+  const [sortAsc, setSortAsc] = useState(false)
+
+  // модалка после загрузки
   const [modalOpen, setModalOpen] = useState(false)
   const [modalLink, setModalLink] = useState('')
   const qrRef = useRef<SVGSVGElement>(null)
 
+  // Загрузка данных
   const fetchRows = () => {
-    sb.from<MessageRow>('messages')
-      .select('id, image_url, views, last_read_at, client_ip')
-      .order('created_at', { ascending: false })
+    sb
+      .from<MessageRow>('messages')
+      .select('id, image_url, views, last_read_at, client_ip, created_at')
       .then(({ data }) => setRows(data || []))
   }
   useEffect(fetchRows, [])
 
+  // Обработчик загрузки
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return alert('Выберите файл!')
@@ -87,7 +93,6 @@ export default function AdminPageClient() {
         expire_at,
       })
 
-      // подготовим модалку
       const msgLink = `${window.location.origin}/message/${id}`
       setModalLink(msgLink)
       setModalOpen(true)
@@ -96,7 +101,6 @@ export default function AdminPageClient() {
       setDays(0)
       setDelete(false)
       fetchRows()
-
     } catch (err: any) {
       console.error(err)
       alert('Ошибка: ' + err.message)
@@ -105,6 +109,7 @@ export default function AdminPageClient() {
     }
   }
 
+  // Скачать QR как SVG
   const downloadQR = () => {
     if (!qrRef.current) return
     const svg = qrRef.current.outerHTML
@@ -117,9 +122,16 @@ export default function AdminPageClient() {
     URL.revokeObjectURL(url)
   }
 
+  // Сортировка локальная
+  const sortedRows = [...rows].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime()
+    const tb = new Date(b.created_at).getTime()
+    return sortAsc ? ta - tb : tb - ta
+  })
+
   return (
     <main className="p-8 bg-gray-900 min-h-screen text-white space-y-8">
-      {/* ==== Форма ==== */}
+      {/* — Загрузка */}
       <section>
         <h2 className="text-2xl mb-3">🎛 Upload Message</h2>
         <form onSubmit={handleUpload} className="flex flex-wrap items-center gap-4">
@@ -161,31 +173,42 @@ export default function AdminPageClient() {
         </form>
       </section>
 
-      {/* ==== Таблица ==== */}
+      {/* — Таблица */}
       <section>
         <h2 className="text-2xl mb-3">📊 Messages</h2>
         <table className="w-full table-auto border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-700">
-              {['ID','Preview','Link','QR','Views','Last Read','IP','Location'].map(h => (
-                <th key={h} className="px-2 py-1 text-left">{h}</th>
+              {['ID','Preview','Link','QR','Views','Last Read','Created','IP','Location'].map(h => (
+                <th
+                  key={h}
+                  className="px-2 py-1 text-left cursor-pointer select-none"
+                  onClick={() => {
+                    if (h === 'Created') setSortAsc(prev => !prev)
+                  }}
+                >
+                  {h}
+                  {h === 'Created' && (
+                    <span className="inline-block ml-1">
+                      {sortAsc ? '↑' : '↓'}
+                    </span>
+                  )}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map(row => {
-              const shortLink = row.image_url.split('?')[0]
-              const displayLink =
-                shortLink.length > 30
-                  ? shortLink.slice(0, 30) + '…'
-                  : shortLink
+            {sortedRows.map(row => {
               const msgLink = `${window.location.origin}/message/${row.id}`
+              const short = msgLink.length > 40
+                ? msgLink.slice(0, 40) + '…'
+                : msgLink
 
               return (
                 <tr key={row.id} className="border-t border-gray-700">
                   <td className="px-2 py-1 break-all">{row.id}</td>
 
-                  {/* Превью картинки */}
+                  {/* Preview */}
                   <td className="px-2 py-1">
                     <img
                       src={row.image_url}
@@ -194,19 +217,19 @@ export default function AdminPageClient() {
                     />
                   </td>
 
-                  {/* короткий кликабельный линк */}
+                  {/* Link на страницу сообщения */}
                   <td className="px-2 py-1">
                     <a
-                      href={row.image_url}
+                      href={msgLink}
                       target="_blank"
                       rel="noreferrer"
                       className="underline hover:text-blue-400"
                     >
-                      {displayLink}
+                      {short}
                     </a>
                   </td>
 
-                  {/* QR в ячейке */}
+                  {/* QR */}
                   <td className="px-2 py-1">
                     <QRCode value={msgLink} size={48} />
                   </td>
@@ -216,6 +239,9 @@ export default function AdminPageClient() {
                     {row.last_read_at
                       ? new Date(row.last_read_at).toLocaleString()
                       : '—'}
+                  </td>
+                  <td className="px-2 py-1">
+                    {new Date(row.created_at).toLocaleString()}
                   </td>
                   <td className="px-2 py-1">{row.client_ip || '—'}</td>
                   <td className="px-2 py-1">
@@ -246,7 +272,7 @@ export default function AdminPageClient() {
         </table>
       </section>
 
-      {/* ==== Модалка ==== */}
+      {/* — Модалка */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-80 text-center space-y-4">
@@ -261,7 +287,7 @@ export default function AdminPageClient() {
                 rel="noreferrer"
                 className="underline text-blue-600"
               >
-                {modalLink.slice(0, 40)}…
+                {modalLink}
               </a>
             </p>
             <div className="flex justify-center gap-4 mt-2">
