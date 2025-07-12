@@ -1,16 +1,11 @@
-'use client'                              // ← ДОЛЖНА БЫТЬ ПЕРВОЙ СТРОКОЙ
+'use client'
 
-// 1) Подключаем иконки Leaflet
-import '../../lib/leaflet'                // <- файл лежит по пути <projectRoot>/lib/leaflet.ts
+import '../lib/leaflet'            // ← вот этот путь
 
-// 2) Динамический импорт React-Leaflet
 import dynamic from 'next/dynamic'
-
-// 3) React-хуки и Supabase-клиент
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-// 4) Только в браузере подгружаем карту
 const MapContainer = dynamic(
   () => import('react-leaflet').then(m => m.MapContainer),
   { ssr: false }
@@ -110,5 +105,5 @@ export default function AdminPage() {
         </tbody>
       </table>
     </main>
-)
+  )
 }
