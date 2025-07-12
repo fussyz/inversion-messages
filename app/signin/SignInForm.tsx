@@ -18,14 +18,15 @@ export default function SignInForm() {
     e.preventDefault()
     setMsg('🔄 Отправляем ссылку…')
 
-    const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
-    const redirectTo  = encodeURIComponent(callbackUrl)
+    // сюда Supabase после верификации редиректит:
+    const callbackUrl = 
+      `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
 
     const { error } = await sb.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo:
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify?redirect_to=${redirectTo}`
+        // передаём только URL своего колбэка, Supabase сам вставит свой verify?token=… 
+        emailRedirectTo: callbackUrl
       },
     })
 
@@ -38,10 +39,13 @@ export default function SignInForm() {
   return (
     <form onSubmit={handle} className="flex flex-col gap-2">
       <input
-        type="email" required
+        type="email"
+        required
         placeholder="you@mail.com"
-        value={email} onChange={e => setEmail(e.target.value)}
-        className="px-3 py-2 bg-gray-100 text-black placeholder-gray-400 focus:outline-none focus:ring"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        className="px-3 py-2 bg-gray-100 text-black placeholder-gray-400
+                   focus:outline-none focus:ring"
       />
       <button className="border px-4 py-2 hover:bg-white hover:text-black">
         Send link
