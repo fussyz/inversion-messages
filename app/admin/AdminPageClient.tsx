@@ -1,3 +1,4 @@
+// app/admin/AdminPageClient.tsx
 'use client'
 
 import '../lib/leaflet'
@@ -36,18 +37,18 @@ type MessageRow = {
 
 export default function AdminPageClient() {
   const [rows, setRows]           = useState<MessageRow[]>([])
-  const [file, setFile]           = useState<File | null>(null)
+  const [file, setFile]           = useState<File|null>(null)
   const [days, setDays]           = useState(0)
   const [deleteOnRead, setDelete] = useState(false)
   const [loading, setLoading]     = useState(false)
   const [sortAsc, setSortAsc]     = useState(false)
 
-  // модалка с QR
+  // модалка QR
   const [modalOpen, setModalOpen] = useState(false)
   const [modalLink, setModalLink] = useState('')
   const qrRef = useRef<SVGSVGElement>(null)
 
-  // загрузка строк
+  // загрузка данных
   const fetchRows = () => {
     sb
       .from<MessageRow>('messages')
@@ -56,7 +57,7 @@ export default function AdminPageClient() {
   }
   useEffect(fetchRows, [])
 
-  // обработчик загрузки нового
+  // загрузка новой картинки
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return alert('Выберите файл!')
@@ -68,16 +69,21 @@ export default function AdminPageClient() {
 
       await sb.storage.from('images').upload(path, file, { upsert: true })
 
-      const keep = deleteOnRead
+      const ttl = deleteOnRead
         ? 60*60*24*365*10
         : days > 0
           ? days*24*3600
           : 60*60*24*365*10
 
-      const { data: urlData } = await sb
+      const { data, error: urlError } = await sb
         .storage
         .from('images')
-        .createSignedUrl(path, keep)
+        .createSignedUrl(path, ttl)
+
+      if (urlError) throw urlError
+      if (!data?.signedUrl) {
+        throw new Error('Не удалось получить signedUrl для файла')
+      }
 
       const auto_delete = deleteOnRead || days > 0
       const expire_at   = days > 0
@@ -86,13 +92,13 @@ export default function AdminPageClient() {
 
       await sb.from('messages').insert({
         id,
-        image_url: urlData!.signedUrl,
+        image_url: data.signedUrl,
         auto_delete,
         expire_at,
       })
 
-      const msgLink = `${window.location.origin}/message/${id}`
-      setModalLink(msgLink)
+      const link = `${window.location.origin}/message/${id}`
+      setModalLink(link)
       setModalOpen(true)
 
       setFile(null)
@@ -107,7 +113,25 @@ export default function AdminPageClient() {
     }
   }
 
-  // скачать QR
+  // ручное удаление
+  const handleDelete = async (id: string, imageUrl: string) => {
+    if (!confirm('Точно удалить это сообщение и картинку?')) return
+
+    // извлечь путь из signed URL
+    const m = imageUrl.match(/\/object\/sign\/(.+?)\?/)
+    const path = m ? decodeURIComponent(m[1]) : null
+    if (path) {
+      const { error: stErr } = await sb.storage.from('images').remove([path])
+      if (stErr) console.error('Storage remove error:', stErr)
+    }
+
+    const { error: dbErr } = await sb.from('messages').delete().eq('id', id)
+    if (dbErr) console.error('DB delete error:', dbErr)
+
+    fetchRows()
+  }
+
+  // скачивание QR
   const downloadQR = () => {
     if (!qrRef.current) return
     const svg = qrRef.current.outerHTML
@@ -120,7 +144,7 @@ export default function AdminPageClient() {
     URL.revokeObjectURL(url)
   }
 
-  // локальная сортировка по created_at
+  // локальная сортировка по дате создания
   const sortedRows = [...rows].sort((a,b) => {
     const ta = new Date(a.created_at).getTime()
     const tb = new Date(b.created_at).getTime()
@@ -130,22 +154,22 @@ export default function AdminPageClient() {
   return (
     <main className="p-8 bg-gray-900 min-h-screen text-white space-y-8">
 
-      {/* Upload form */}
+      {/* загрузка */}
       <section>
         <h2 className="text-2xl mb-3">🎛 Upload Message</h2>
         <form onSubmit={handleUpload} className="flex flex-wrap items-center gap-4">
           <input
             type="file"
             accept="image/*"
-            onChange={e => setFile(e.target.files?.[0] || null)}
+            onChange={e=>setFile(e.target.files?.[0]||null)}
             className="text-black"
           />
 
-          <label className="flex items-center space-x-2 text-white">
+          <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={deleteOnRead}
-              onChange={e => setDelete(e.target.checked)}
+              onChange={e=>setDelete(e.target.checked)}
               className="w-4 h-4"
             />
             <span>Удалять после прочтения</span>
@@ -156,7 +180,7 @@ export default function AdminPageClient() {
               type="number"
               min={0}
               value={days}
-              onChange={e => setDays(+e.target.value)}
+              onChange={e=>setDays(+e.target.value)}
               placeholder="Дней хранить (0 = навсегда)"
               className="w-48 p-1 text-black"
             />
@@ -172,87 +196,98 @@ export default function AdminPageClient() {
         </form>
       </section>
 
-      {/* Table */}
+      {/* таблица */}
       <section>
         <h2 className="text-2xl mb-3">📊 Messages</h2>
         <table className="w-full table-auto border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-700">
-              {['ID','Preview','QR','Views','Last Read','Created','IP','Location'].map(h => (
+              {['ID','Preview','QR','Views','Last Read','Created','IP','Location',''].map(h=>(
                 <th
                   key={h}
                   className="px-2 py-1 text-left cursor-pointer select-none"
-                  onClick={() => h==='Created' && setSortAsc(prev=>!prev)}
+                  onClick={()=>h==='Created'&&setSortAsc(prev=>!prev)}
                 >
-                  {h}{h==='Created' && <span className="ml-1">{sortAsc?'↑':'↓'}</span>}
+                  {h}{h==='Created'&&<span className="ml-1">{sortAsc?'↑':'↓'}</span>}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {sortedRows.map(row => {
-              const msgLink = `${window.location.origin}/message/${row.id}`
-
+            {sortedRows.map(r=>{
+              const link = `${window.location.origin}/message/${r.id}`
               return (
-                <tr key={row.id} className="border-t border-gray-700">
-                  {/* Кликабельный ID */}
+                <tr key={r.id} className="border-t border-gray-700">
+                  {/* ID как ссылка */}
                   <td className="px-2 py-1">
                     <a
-                      href={msgLink}
+                      href={link}
                       target="_blank"
                       rel="noreferrer"
                       className="underline hover:text-blue-400"
                     >
-                      {row.id}
+                      {r.id}
                     </a>
                   </td>
 
-                  {/* Preview */}
+                  {/* превью */}
                   <td className="px-2 py-1">
                     <img
-                      src={row.image_url}
+                      src={r.image_url}
                       alt=""
                       className="h-12 w-12 object-cover rounded"
                     />
                   </td>
 
-                  {/* QR (по клику тоже модал) */}
+                  {/* QR */}
                   <td
                     className="px-2 py-1 cursor-pointer"
-                    onClick={() => { setModalLink(msgLink); setModalOpen(true) }}
+                    onClick={()=>{ setModalLink(link); setModalOpen(true) }}
                   >
-                    <QRCode value={msgLink} size={48} />
+                    <QRCode value={link} size={48} />
                   </td>
 
-                  <td className="px-2 py-1">{row.views}</td>
+                  <td className="px-2 py-1">{r.views}</td>
                   <td className="px-2 py-1">
-                    {row.last_read_at ? new Date(row.last_read_at).toLocaleString() : '—'}
+                    {r.last_read_at
+                      ? new Date(r.last_read_at).toLocaleString()
+                      : '—'}
                   </td>
                   <td className="px-2 py-1">
-                    {new Date(row.created_at).toLocaleString()}
+                    {new Date(r.created_at).toLocaleString()}
                   </td>
-                  <td className="px-2 py-1">{row.client_ip || '—'}</td>
+                  <td className="px-2 py-1">{r.client_ip||'—'}</td>
                   <td className="px-2 py-1">
-                    {row.client_ip
-                      ? <MapContainer
-                          center={[0,0]}
-                          zoom={2}
-                          style={{height:80, width:120}}
-                          whenCreated={map => {
-                            fetch(`https://ipapi.co/${row.client_ip}/json/`)
-                              .then(r=>r.json())
-                              .then(data=>{
-                                if(data.latitude&&data.longitude){
-                                  map.setView([data.latitude,data.longitude],4)
-                                  new Marker([data.latitude,data.longitude]).addTo(map)
-                                }
-                              })
-                          }}
-                        >
-                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-                        </MapContainer>
-                      : '—'
-                    }
+                    {r.client_ip ? (
+                      <MapContainer
+                        center={[0,0]}
+                        zoom={2}
+                        style={{height:80,width:120}}
+                        whenCreated={map=>{
+                          fetch(`https://ipapi.co/${r.client_ip}/json/`)
+                            .then(res=>res.json())
+                            .then(d=>{
+                              if(d.latitude&&d.longitude){
+                                map.setView([d.latitude,d.longitude],4)
+                                new Marker([d.latitude,d.longitude]).addTo(map)
+                              }
+                            })
+                        }}
+                      >
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      </MapContainer>
+                    ) : '—'}
+                  </td>
+
+                  {/* корзина */}
+                  <td className="px-2 py-1">
+                    <button
+                      onClick={()=>handleDelete(r.id, r.image_url)}
+                      className="text-red-500 hover:text-red-700"
+                      title="Удалить"
+                    >
+                      🗑️
+                    </button>
                   </td>
                 </tr>
               )
@@ -261,7 +296,7 @@ export default function AdminPageClient() {
         </table>
       </section>
 
-      {/* Modal */}
+      {/* модалка */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-80 text-center space-y-4">
@@ -297,5 +332,5 @@ export default function AdminPageClient() {
         </div>
       )}
     </main>
-  )
+)
 }

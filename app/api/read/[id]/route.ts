@@ -1,46 +1,33 @@
-export const dynamic = 'force-dynamic'
+// файл: app/api/read/[id]/route.ts
 
-import { NextResponse, NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// создаём клиент прямо здесь, без алиасов
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!   // или PUBLIC-ключ, если сервис ролей не нужен
+  process.env.SUPABASE_SERVICE_ROLE_KEY!    // обязательно в .env.local
 )
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id
+  // получаем IP клиента (Next.js 14+ автоматически заполняет req.ip)
+  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0] || req.ip || null
 
-  // Извлёк IP из заголовка
-  const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    null
-
-  // 1) Берём запись
-  const { data: message, error: fetchErr } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (fetchErr || !message) {
-    return NextResponse.json({ error: fetchErr?.message || 'Not found' }, { status: 404 })
-  }
-
-  // 2) Обновляем статистику
-  await supabase
+  // 1) обновляем stats
+  const { error } = await supabaseAdmin
     .from('messages')
     .update({
-      views: message.views + 1,
+      views: supabaseAdmin.raw('views + 1'),
       last_read_at: new Date().toISOString(),
       client_ip: ip,
     })
     .eq('id', id)
 
-  // 3) Отдаём URL картинки
-  return NextResponse.json({ image_url: message.image_url })
+  if (error) {
+    console.error('Ошибка обновления stats:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // 2) перенаправляем пользователя на страницу с картинкой
+  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/message/${id}`)
 }
