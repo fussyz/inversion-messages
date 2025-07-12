@@ -1,10 +1,11 @@
-// Это серверный «обёрточный» компонент, никакого window-кода тут нет.
+// app/admin/page.tsx
+
 export const dynamic = 'force-dynamic'
 
-import dynamic from 'next/dynamic'
+import dyn from 'next/dynamic'
 
-// Динамически подгружаем только в браузере весь наш настоящий Admin UI
-const AdminPageClient = dynamic(
+// динамически (только в браузере) подгружаем клиентский UI
+const AdminPageClient = dyn(
   () => import('./AdminPageClient'),
   { ssr: false }
 )
