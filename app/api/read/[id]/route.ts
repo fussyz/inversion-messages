@@ -1,36 +1,47 @@
-import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { NextResponse, NextRequest } from 'next/server'
+import { supabase } from '@/lib/supabase-server'
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-export async function PUT(
-  request: Request,
-  context: any
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
-  const { id } = params
+  const id = params.id
 
-  const { data } = await supabase
+  // 1. получаем IP клиента (напр. X-Forwarded-For)
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.ip ||
+    null
+
+  // 2. вытаскиваем запись
+  const { data: message, error: fetchErr } = await supabase
     .from('messages')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (!data) return NextResponse.json({ ok: false })
-
-  if (!data.expire_at && !data.auto_delete && data.days_to_live) {
-    const exp = new Date(Date.now() + data.days_to_live * 86_400_000).toISOString()
-    await supabase.from('messages').update({ expire_at: exp }).eq('id', id)
+  if (fetchErr || !message) {
+    return NextResponse.json(
+      { error: fetchErr?.message ?? 'Not found' },
+      { status: 404 }
+    )
   }
 
-  await supabase.from('messages').update({
-    views: (data.views ?? 0) + 1,
-    last_read_at: new Date().toISOString(),
-  }).eq('id', id)
+  // 3. обновляем статистику
+  const { error: updateErr } = await supabase
+    .from('messages')
+    .update({
+      views: message.views + 1,
+      last_read_at: new Date().toISOString(),
+      client_ip: ip,
+    })
+    .eq('id', id)
 
-  if (data.auto_delete) {
-    await supabase.from('messages').delete().eq('id', id)
+  if (updateErr) {
+    console.error('Failed to update stats:', updateErr)
+    // но картинку всё равно отдадим
   }
 
-  return NextResponse.json({ ok: true })
+  // 4. отдаём URL картинки
+  return NextResponse.json({ image_url: message.image_url })
 }

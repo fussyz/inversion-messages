@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.3",
+    "leaflet": "^1.9.4",
     "next": "15.3.5",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -1,138 +1,116 @@
+// File: app/admin/page.tsx
+
+// 1) Настраиваем Leaflet-иконки (путь к marker-icon.png и shadow.png)
+import '@/lib/leaflet'
+
+// 2) Динамический импорт React-Leaflet, чтобы обойти SSR
+import dynamic from 'next/dynamic'
+
+// 3) Остальные импорты React и Supabase
 'use client'
-
-import { useState, useMemo } from 'react'
-import { nanoid } from 'nanoid'
+import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { QRCodeCanvas } from 'qrcode.react'
 
-// 1 ─ браузерный Supabase-клиент
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY!
+// 4) Динамически подгружаем компоненты карты только в браузере
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((m) => m.MapContainer),
+  { ssr: false }
+)
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((m) => m.TileLayer),
+  { ssr: false }
+)
+const Marker = dynamic(
+  () => import('react-leaflet').then((m) => m.Marker),
+  { ssr: false }
 )
 
-export default function Admin() {
-  /* form-state */
-  const [file, setFile]   = useState<File | null>(null)
-  const [autoDel, setAD]  = useState(false)
-  const [forever, setFor] = useState(false)
-  const [days, setDays]   = useState(1)
+// 5) Тип строки таблицы
+type MessageRow = {
+  id: string
+  image_url: string
+  views: number
+  last_read_at: string | null
+  client_ip: string | null
+}
 
-  /* ui-state */
-  const [busy, setBusy]   = useState(false)
-  const [err,  setErr]    = useState('')
-  const [fullURL, setFullURL] = useState('')
+export default function AdminPage() {
+  const [rows, setRows] = useState<MessageRow[]>([])
 
-  /*  генерируем id один раз на монт */
-  const id = useMemo(() => nanoid(10), [])
-
-  /* submit */
-  async function handle(e: React.FormEvent) {
-    e.preventDefault()
-    if (!file) { setErr('Файл не выбран'); return }
-
-    setBusy(true); setErr('')
-
-    /* 1 ─ кладём картинку в bucket images/msg-<id>.jpg */
-    const { error: upErr } = await sb
-      .storage
-      .from('images')
-      .upload(`msg-${id}.jpg`, file, { upsert: false })
-
-    if (upErr) { setErr(upErr.message); setBusy(false); return }
-
-    /* 2 ─ получаем signedURL (1 год) */
-    const { data: signed, error: signErr } = await sb
-      .storage
-      .from('images')
-      .createSignedUrl(`msg-${id}.jpg`, 60 * 60 * 24 * 365)
-
-    if (signErr) { setErr(signErr.message); setBusy(false); return }
-
-    /* 3 ─ готовим days_to_live */
-    const days_to_live = autoDel || forever ? null : days > 0 ? days : null
-
-    /* 4 ─ записываем строку в messages */
-    const { error: insErr } = await sb.from('messages').insert({
-      id,
-      image_url   : signed!.signedUrl,
-      auto_delete : autoDel,
-      days_to_live,
-      expire_at   : null,
-    })
-
-    if (insErr) { setErr(insErr.message); setBusy(false); return }
-
-    /* 5 ─ показываем готовую ссылку/QR */
-    setFullURL(`${window.location.origin}/message/${id}`)
-    setBusy(false)
-  }
+  useEffect(() => {
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_KEY!
+    )
+    sb
+      .from<MessageRow>('messages')
+      .select('id, image_url, views, last_read_at, client_ip')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error(error)
+        else setRows(data!)
+      })
+  }, [])
 
   return (
-    <main className="min-h-screen bg-black text-white py-10 px-6">
-      <h1 className="text-xl mb-6">🎛 Upload message</h1>
-
-      <form onSubmit={handle} className="flex flex-col gap-4 max-w-md">
-        {/* файл */}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={e => setFile(e.target.files?.[0] ?? null)}
-          className="text-sm"
-        />
-
-        {/* автоудаление */}
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={autoDel}
-            onChange={e => setAD(e.target.checked)}
-          />
-          Удалить сразу после просмотра
-        </label>
-
-        {/* срок хранения */}
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={forever}
-            onChange={e => setFor(e.target.checked)}
-          />
-          Хранить вечно
-        </label>
-
-        {!forever && !autoDel && (
-          <div className="flex items-center gap-2">
-            <span>Сколько дней хранить:</span>
-            <input
-              type="number"
-              min={0}
-              value={days}
-              onChange={e => setDays(+e.target.value)}
-              className="w-20 px-2 py-1 bg-gray-100 text-black
-                         placeholder-gray-400 focus:outline-none focus:ring"
-              placeholder="0 = ∞"
-            />
-          </div>
-        )}
-
-        <button
-          disabled={busy}
-          className="border px-4 py-2 hover:bg-white hover:text-black disabled:opacity-50"
-        >
-          {busy ? 'Загружаю…' : 'Загрузить'}
-        </button>
-      </form>
-
-      {err && <p className="mt-4 text-red-400">{err}</p>}
-
-      {/* QR + ссылка после загрузки */}
-      {fullURL && (
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <QRCodeCanvas value={fullURL} size={200} bgColor="#000" fgColor="#fff" />
-          <a href={fullURL} className="underline break-all text-blue-300">{fullURL}</a>
-        </div>
-      )}
+    <main className="p-8 bg-gray-900 min-h-screen text-white">
+      <h1 className="text-2xl mb-4">Admin: Messages</h1>
+      <table className="w-full table-auto border-collapse">
+        <thead>
+          <tr>
+            <th className="px-4 py-2">ID</th>
+            <th className="px-4 py-2">Image</th>
+            <th className="px-4 py-2">Views</th>
+            <th className="px-4 py-2">Last Read</th>
+            <th className="px-4 py-2">IP</th>
+            <th className="px-4 py-2">Location</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.id} className="border-t border-gray-700">
+              <td className="px-4 py-2">{row.id}</td>
+              <td className="px-4 py-2">
+                <img
+                  src={row.image_url}
+                  alt=""
+                  className="h-12 w-12 object-cover rounded"
+                />
+              </td>
+              <td className="px-4 py-2">{row.views}</td>
+              <td className="px-4 py-2">
+                {row.last_read_at
+                  ? new Date(row.last_read_at).toLocaleString()
+                  : '—'}
+              </td>
+              <td className="px-4 py-2">{row.client_ip || '—'}</td>
+              <td className="px-4 py-2">
+                {row.client_ip ? (
+                  <MapContainer
+                    center={[0, 0]}
+                    zoom={2}
+                    style={{ height: 100, width: 150 }}
+                    whenCreated={(map) => {
+                      fetch(`https://ipapi.co/${row.client_ip}/json/`)
+                        .then((r) => r.json())
+                        .then((data: any) => {
+                          if (data.latitude && data.longitude) {
+                            map.setView([data.latitude, data.longitude], 4)
+                            new Marker([data.latitude, data.longitude]).addTo(map)
+                          }
+                        })
+                    }}
+                  >
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                  </MapContainer>
+                ) : (
+                  '—'
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </main>
   )
 }
