@@ -1,12 +1,37 @@
-export const dynamic = 'force-dynamic'     // ← серверная, без SSG
+'use client'
 
-import CallbackClient from './CallbackClient'
+import { useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
 
-type Props = {
-  searchParams: { returnTo?: string }
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_KEY!
+)
 
-export default function CallbackPage({ searchParams }: Props) {
-  const returnTo = searchParams.returnTo ?? '/admin'
-  return <CallbackClient returnTo={returnTo} />
+export default function AuthCallbackPage() {
+  const router = useRouter()
+  const params = useSearchParams()
+
+  useEffect(() => {
+    const token = params.get('token')
+    const type = params.get('type')
+    const returnTo = params.get('returnTo') || '/signin'
+
+    if (token && type) {
+      supabase.auth.verifyOtp({ token, type })
+        .then(({ error }) => {
+          if (error) {
+            console.error(error)
+            router.replace('/signin')
+          } else {
+            router.replace(returnTo)
+          }
+        })
+    } else {
+      router.replace('/signin')
+    }
+  }, [params, router])
+
+  return <p className="p-8 text-center">Авторизуемся…</p>
 }
