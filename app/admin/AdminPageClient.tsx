@@ -1,8 +1,8 @@
 'use client'
 
-import '../lib/leaflet'            // для корректных иконок маркера
+import '../lib/leaflet'
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { nanoid } from 'nanoid'
 import QRCode from 'react-qr-code'
@@ -12,7 +12,6 @@ const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 )
 
-// динамически подгружаем карту только в браузере
 const MapContainer = dynamic(
   () => import('react-leaflet').then(m => m.MapContainer),
   { ssr: false }
@@ -37,11 +36,15 @@ type MessageRow = {
 export default function AdminPageClient() {
   const [rows, setRows]           = useState<MessageRow[]>([])
   const [file, setFile]           = useState<File | null>(null)
-  const [days, setDays]           = useState<number>(0)
-  const [deleteOnRead, setDelete] = useState<boolean>(false)
+  const [days, setDays]           = useState(0)
+  const [deleteOnRead, setDelete] = useState(false)
   const [loading, setLoading]     = useState(false)
 
-  // 📥 Загрузка статистики
+  // для модалки
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalLink, setModalLink] = useState('')
+  const qrRef = useRef<SVGSVGElement>(null)
+
   const fetchRows = () => {
     sb.from<MessageRow>('messages')
       .select('id, image_url, views, last_read_at, client_ip')
@@ -50,7 +53,6 @@ export default function AdminPageClient() {
   }
   useEffect(fetchRows, [])
 
-  // 🚀 Обработчик формы
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) return alert('Выберите файл!')
@@ -60,12 +62,10 @@ export default function AdminPageClient() {
       const id = nanoid()
       const path = `images/${id}-${file.name}`
 
-      // 1) закидываем в хранилище
       await sb.storage.from('images').upload(path, file, { upsert: true })
 
-      // 2) подписанный URL, живёт столько, сколько нужно
       const keepSeconds = deleteOnRead
-        ? 60 * 60 * 24 * 365 * 10   // условно “навсегда” для доступности
+        ? 60 * 60 * 24 * 365 * 10
         : days > 0
           ? days * 24 * 3600
           : 60 * 60 * 24 * 365 * 10
@@ -75,13 +75,11 @@ export default function AdminPageClient() {
         .from('images')
         .createSignedUrl(path, keepSeconds)
 
-      // 3) рассчитываем expire_at и auto_delete
       const auto_delete = deleteOnRead || days > 0
       const expire_at   = days > 0
         ? new Date(Date.now() + days * 86400000).toISOString()
         : null
 
-      // 4) вставляем запись
       await sb.from('messages').insert({
         id,
         image_url: urlData!.signedUrl,
@@ -89,11 +87,16 @@ export default function AdminPageClient() {
         expire_at,
       })
 
-      // сброс и обновление
+      // подготовим модалку
+      const msgLink = `${window.location.origin}/message/${id}`
+      setModalLink(msgLink)
+      setModalOpen(true)
+
       setFile(null)
       setDays(0)
       setDelete(false)
       fetchRows()
+
     } catch (err: any) {
       console.error(err)
       alert('Ошибка: ' + err.message)
@@ -102,9 +105,21 @@ export default function AdminPageClient() {
     }
   }
 
+  const downloadQR = () => {
+    if (!qrRef.current) return
+    const svg = qrRef.current.outerHTML
+    const blob = new Blob([svg], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'qr-code.svg'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <main className="p-8 bg-gray-900 min-h-screen text-white space-y-8">
-      {/* === Форма загрузки === */}
+      {/* ==== Форма ==== */}
       <section>
         <h2 className="text-2xl mb-3">🎛 Upload Message</h2>
         <form onSubmit={handleUpload} className="flex flex-wrap items-center gap-4">
@@ -115,14 +130,14 @@ export default function AdminPageClient() {
             className="text-black"
           />
 
-          <label className="flex items-center space-x-2">
+          <label className="flex items-center space-x-2 text-white">
             <input
               type="checkbox"
               checked={deleteOnRead}
               onChange={e => setDelete(e.target.checked)}
               className="w-4 h-4"
             />
-            <span>Удалять после первого просмотра</span>
+            <span>Удалять после прочтения</span>
           </label>
 
           {!deleteOnRead && (
@@ -131,7 +146,7 @@ export default function AdminPageClient() {
               min={0}
               value={days}
               onChange={e => setDays(+e.target.value)}
-              placeholder="Сколько дней хранить (0 = навсегда)"
+              placeholder="Дней хранить (0 = навсегда)"
               className="w-48 p-1 text-black"
             />
           )}
@@ -146,39 +161,54 @@ export default function AdminPageClient() {
         </form>
       </section>
 
-      {/* === Статистика === */}
-      <section className="space-y-4">
-        <h2 className="text-2xl">📊 Messages</h2>
+      {/* ==== Таблица ==== */}
+      <section>
+        <h2 className="text-2xl mb-3">📊 Messages</h2>
         <table className="w-full table-auto border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-700">
-              {['ID','Link','QR','Views','Last Read','IP','Location'].map(h => (
+              {['ID','Preview','Link','QR','Views','Last Read','IP','Location'].map(h => (
                 <th key={h} className="px-2 py-1 text-left">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map(row => {
+              const shortLink = row.image_url.split('?')[0]
+              const displayLink =
+                shortLink.length > 30
+                  ? shortLink.slice(0, 30) + '…'
+                  : shortLink
               const msgLink = `${window.location.origin}/message/${row.id}`
+
               return (
                 <tr key={row.id} className="border-t border-gray-700">
                   <td className="px-2 py-1 break-all">{row.id}</td>
 
-                  {/* сгенерированная ссылка на страницу (а не картинка!) */}
+                  {/* Превью картинки */}
+                  <td className="px-2 py-1">
+                    <img
+                      src={row.image_url}
+                      alt=""
+                      className="h-12 w-12 object-cover rounded"
+                    />
+                  </td>
+
+                  {/* короткий кликабельный линк */}
                   <td className="px-2 py-1">
                     <a
                       href={row.image_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="underline"
+                      className="underline hover:text-blue-400"
                     >
-                      {row.image_url.split('?')[0]}
+                      {displayLink}
                     </a>
                   </td>
 
-                  {/* QR-код к msgLink */}
+                  {/* QR в ячейке */}
                   <td className="px-2 py-1">
-                    <QRCode value={msgLink} size={64} />
+                    <QRCode value={msgLink} size={48} />
                   </td>
 
                   <td className="px-2 py-1">{row.views}</td>
@@ -193,7 +223,7 @@ export default function AdminPageClient() {
                       <MapContainer
                         center={[0,0]}
                         zoom={2}
-                        style={{ height: 100, width: 140 }}
+                        style={{ height: 80, width: 120 }}
                         whenCreated={map => {
                           fetch(`https://ipapi.co/${row.client_ip}/json/`)
                             .then(r => r.json())
@@ -215,6 +245,42 @@ export default function AdminPageClient() {
           </tbody>
         </table>
       </section>
+
+      {/* ==== Модалка ==== */}
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-80 text-center space-y-4">
+            <h3 className="text-xl font-bold">Готово!</h3>
+            <div ref={qrRef} className="inline-block bg-white p-2">
+              <QRCode value={modalLink} size={128} />
+            </div>
+            <p className="break-words text-sm">
+              <a
+                href={modalLink}
+                target="_blank"
+                rel="noreferrer"
+                className="underline text-blue-600"
+              >
+                {modalLink.slice(0, 40)}…
+              </a>
+            </p>
+            <div className="flex justify-center gap-4 mt-2">
+              <button
+                onClick={downloadQR}
+                className="px-4 py-2 bg-green-600 rounded hover:bg-green-500 text-white"
+              >
+                Скачать QR
+              </button>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="px-4 py-2 bg-gray-400 rounded hover:bg-gray-300"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
