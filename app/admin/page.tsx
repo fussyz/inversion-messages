@@ -1,23 +1,8 @@
-'use client'
+// app/admin/page.tsx
+export const dynamic = 'force-dynamic'  // отключаем SSG/SSR prerender
 
-import '../lib/leaflet'            // ← вот этот путь
-
-import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-
-const MapContainer = dynamic(
-  () => import('react-leaflet').then(m => m.MapContainer),
-  { ssr: false }
-)
-const TileLayer = dynamic(
-  () => import('react-leaflet').then(m => m.TileLayer),
-  { ssr: false }
-)
-const Marker = dynamic(
-  () => import('react-leaflet').then(m => m.Marker),
-  { ssr: false }
-)
+import { AdminMap } from './AdminMap'     // наш клиентский компонент для карты
 
 type MessageRow = {
   id: string
@@ -27,78 +12,55 @@ type MessageRow = {
   client_ip: string | null
 }
 
-export default function AdminPage() {
-  const [rows, setRows] = useState<MessageRow[]>([])
+export default async function AdminPage() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY!
+  )
 
-  useEffect(() => {
-    const sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_KEY!
-    )
-    sb
-      .from<MessageRow>('messages')
-      .select('id, image_url, views, last_read_at, client_ip')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        else setRows(data!)
-      })
-  }, [])
+  const { data: rows, error } = await supabase
+    .from<MessageRow>('messages')
+    .select('id, image_url, views, last_read_at, client_ip')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw new Error('Failed to fetch messages: ' + error.message)
+  }
 
   return (
     <main className="p-8 bg-gray-900 min-h-screen text-white">
-      <h1 className="text-2xl mb-4">Admin: Messages</h1>
+      <h1 className="text-2xl mb-6">Admin: Messages</h1>
       <table className="w-full table-auto border-collapse">
         <thead>
-          <tr>
-            <th className="px-4 py-2">ID</th>
-            <th className="px-4 py-2">Image</th>
-            <th className="px-4 py-2">Views</th>
-            <th className="px-4 py-2">Last Read</th>
-            <th className="px-4 py-2">IP</th>
-            <th className="px-4 py-2">Location</th>
+          <tr className="border-b border-gray-700">
+            <th className="px-3 py-2 text-left">ID</th>
+            <th className="px-3 py-2 text-left">Image</th>
+            <th className="px-3 py-2 text-left">Views</th>
+            <th className="px-3 py-2 text-left">Last Read</th>
+            <th className="px-3 py-2 text-left">IP</th>
+            <th className="px-3 py-2 text-left">Location</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(row => (
+          {rows?.map(row => (
             <tr key={row.id} className="border-t border-gray-700">
-              <td className="px-4 py-2">{row.id}</td>
-              <td className="px-4 py-2">
+              <td className="px-3 py-2">{row.id}</td>
+              <td className="px-3 py-2">
                 <img
                   src={row.image_url}
                   alt=""
                   className="h-12 w-12 object-cover rounded"
                 />
               </td>
-              <td className="px-4 py-2">{row.views}</td>
-              <td className="px-4 py-2">
+              <td className="px-3 py-2">{row.views}</td>
+              <td className="px-3 py-2">
                 {row.last_read_at
                   ? new Date(row.last_read_at).toLocaleString()
                   : '—'}
               </td>
-              <td className="px-4 py-2">{row.client_ip || '—'}</td>
-              <td className="px-4 py-2">
-                {row.client_ip ? (
-                  <MapContainer
-                    center={[0, 0]}
-                    zoom={2}
-                    style={{ height: 100, width: 150 }}
-                    whenCreated={map => {
-                      fetch(`https://ipapi.co/${row.client_ip}/json/`)
-                        .then(r => r.json())
-                        .then(data => {
-                          if (data.latitude && data.longitude) {
-                            map.setView([data.latitude, data.longitude], 4)
-                            new Marker([data.latitude, data.longitude]).addTo(map)
-                          }
-                        })
-                    }}
-                  >
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  </MapContainer>
-                ) : (
-                  '—'
-                )}
+              <td className="px-3 py-2">{row.client_ip || '—'}</td>
+              <td className="px-3 py-2">
+                {row.client_ip ? <AdminMap ip={row.client_ip} /> : '—'}
               </td>
             </tr>
           ))}
