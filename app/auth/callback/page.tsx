@@ -1,3 +1,4 @@
+// app/auth/callback/page.tsx
 'use client'
 
 import { useEffect } from 'react'
@@ -15,18 +16,14 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const token = params.get('token')
-    const type = params.get('type')
+    const type  = params.get('type')
     const returnTo = params.get('returnTo') || '/signin'
 
     if (token && type) {
       supabase.auth.verifyOtp({ token, type })
         .then(({ error }) => {
-          if (error) {
-            console.error(error)
-            router.replace('/signin')
-          } else {
-            router.replace(returnTo)
-          }
+          if (error) router.replace('/signin')
+          else     router.replace(returnTo)
         })
     } else {
       router.replace('/signin')
