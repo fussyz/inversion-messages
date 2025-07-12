@@ -1,3 +1,5 @@
+// File: app/signin/SignInForm.tsx
+
 'use client'
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -12,20 +14,20 @@ export default function SignInForm() {
   const [email, setEmail] = useState('')
   const [msg,   setMsg]   = useState('')
   const params = useSearchParams()
+  // raw returnTo, без кодирования
   const returnTo = params.get('returnTo') || '/admin'
 
   async function handle(e: React.FormEvent) {
     e.preventDefault()
     setMsg('🔄 Отправляем ссылку…')
 
-    // формируем полный callback со всем returnTo
-    const callbackUrl =
-      `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
+    // >>> здесь НЕТ encodeURIComponent <<<
+    const callbackUrl = 
+      `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?returnTo=${returnTo}`
 
     const { error } = await sb.auth.signInWithOtp({
       email,
       options: {
-        // передаём этот URL, Supabase обернёт его verify?token=…&redirect_to=
         emailRedirectTo: callbackUrl
       },
     })
@@ -39,12 +41,10 @@ export default function SignInForm() {
   return (
     <form onSubmit={handle} className="flex flex-col gap-2">
       <input
-        type="email"
-        required
-        placeholder="you@mail.com"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        className="px-3 py-2 bg-gray-100 text-black placeholder-gray-400 focus:outline-none focus:ring"
+        type="email" required placeholder="you@mail.com"
+        value={email} onChange={e => setEmail(e.target.value)}
+        className="px-3 py-2 bg-gray-100 text-black placeholder-gray-400
+                   focus:outline-none focus:ring"
       />
       <button className="border px-4 py-2 hover:bg-white hover:text-black">
         Send link
