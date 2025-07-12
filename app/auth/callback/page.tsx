@@ -16,21 +16,22 @@ export default function AuthCallbackPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const run = async () => {
+    const finishAuth = async () => {
       const { error } = await sb.auth.exchangeCodeForSession({})
       if (error) {
-        console.error(error)
-        return router.replace(
-          `/signin?returnTo=${encodeURIComponent(params.get('returnTo') || '/')}`
-        )
+        console.error('Auth error:', error)
+        // вернёмся на страницу логина, передав returnTo
+        const rt = params.get('returnTo') || '/'
+        return router.replace(`/signin?returnTo=${encodeURIComponent(rt)}`)
       }
+      // после успешной аутентификации редиректим туда, откуда шли
       router.replace(params.get('returnTo') || '/')
     }
-    run()
+    finishAuth()
   }, [params, router])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
       <p>Авторизуем…</p>
     </div>
   )
