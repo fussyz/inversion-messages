@@ -10,26 +10,32 @@ const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 )
 
-export default function AuthCallback() {
+export default function AuthCallbackPage() {
   const params = useSearchParams()
   const router = useRouter()
 
   useEffect(() => {
-    const run = async () => {
-      // подцепляем сессию из URL (magic link)
+    const handleAuth = async () => {
+      // завершаем magic link flow
       const { data, error } = await sb.auth.exchangeCodeForSession({
-        // Supabase автоматически разбирает window.location.href
+        // Supabase сам разберёт код из URL
       })
       if (error) {
-        console.error(error)
-        return router.push(`/signin?returnTo=${params.get('returnTo')}`)
+        console.error('Auth error:', error)
+        // если не удалось — вернёмся на вход
+        return router.replace(`/signin?returnTo=${params.get('returnTo') || '/'}`)
       }
-      // после успешного входа редиректим на returnTo
-      const to = params.get('returnTo') ?? '/'
+      // а после успешной аутентификации — редирект туда, откуда шли
+      const to = params.get('returnTo') || '/'
       router.replace(to)
     }
-    run()
+
+    handleAuth()
   }, [params, router])
 
-  return <p className="p-8">Авторизуем…</p>
+  return (
+    <div className="p-8 text-center">
+      <p>Авторизуем…</p>
+    </div>
+  )
 }
