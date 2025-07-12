@@ -44,7 +44,7 @@ export default function AdminPageClient() {
   // сортировка по дате создания
   const [sortAsc, setSortAsc] = useState(false)
 
-  // модалка после загрузки
+  // модалка после загрузки или клика по QR
   const [modalOpen, setModalOpen] = useState(false)
   const [modalLink, setModalLink] = useState('')
   const qrRef = useRef<SVGSVGElement>(null)
@@ -183,15 +183,11 @@ export default function AdminPageClient() {
                 <th
                   key={h}
                   className="px-2 py-1 text-left cursor-pointer select-none"
-                  onClick={() => {
-                    if (h === 'Created') setSortAsc(prev => !prev)
-                  }}
+                  onClick={() => { if (h === 'Created') setSortAsc(prev => !prev) }}
                 >
                   {h}
                   {h === 'Created' && (
-                    <span className="inline-block ml-1">
-                      {sortAsc ? '↑' : '↓'}
-                    </span>
+                    <span className="inline-block ml-1">{sortAsc ? '↑' : '↓'}</span>
                   )}
                 </th>
               ))}
@@ -229,8 +225,15 @@ export default function AdminPageClient() {
                     </a>
                   </td>
 
-                  {/* QR */}
-                  <td className="px-2 py-1">
+                  {/* QR — теперь кликабелен */}
+                  <td
+                    className="px-2 py-1 cursor-pointer"
+                    onClick={() => {
+                      setModalLink(msgLink)
+                      setModalOpen(true)
+                    }}
+                    title="Открыть QR-код"
+                  >
                     <QRCode value={msgLink} size={48} />
                   </td>
 
