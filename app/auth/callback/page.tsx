@@ -1,5 +1,6 @@
 // app/auth/callback/page.tsx
 'use client'
+export const dynamic = 'force-dynamic'
 
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -16,25 +17,21 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const handleAuth = async () => {
-      // завершаем magic link flow
-      const { data, error } = await sb.auth.exchangeCodeForSession({
-        // Supabase сам разберёт код из URL
-      })
+      // завершаем magic-link flow
+      const { error } = await sb.auth.exchangeCodeForSession({})
       if (error) {
         console.error('Auth error:', error)
-        // если не удалось — вернёмся на вход
-        return router.replace(`/signin?returnTo=${params.get('returnTo') || '/'}`)
+        return router.replace(`/signin?returnTo=${encodeURIComponent(params.get('returnTo') || '/')}`)
       }
-      // а после успешной аутентификации — редирект туда, откуда шли
+      // после входа — редирект на returnTo или в корень
       const to = params.get('returnTo') || '/'
       router.replace(to)
     }
-
     handleAuth()
   }, [params, router])
 
   return (
-    <div className="p-8 text-center">
+    <div className="p-8 text-center text-white bg-gray-900 min-h-[50vh] flex items-center justify-center">
       <p>Авторизуем…</p>
     </div>
   )
