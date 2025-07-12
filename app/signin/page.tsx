@@ -1,10 +1,11 @@
+// app/signin/page.tsx
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
+const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 )
@@ -12,40 +13,44 @@ const supabase = createClient(
 export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const params = useSearchParams()
   const router = useRouter()
 
-  const handleSubmit = async (e: FormEvent) => {
+  // из ?returnTo=…
+  const returnTo = params.get('returnTo') ?? '/'
+
+  const handle = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await sb.auth.signInWithOtp({
       email,
       options: {
-        // ↪ после клика по ссылке мы попадём на /auth/callback?returnTo=/admin
-        emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=/admin`,
-      },
+        // прокидываем динамический returnTo
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
+      }
     })
-    setLoading(false)
     if (error) alert(error.message)
-    else alert('Проверьте почту — вам пришёл magic link')
+    else alert('Ссылка отправлена на почту')
+    setLoading(false)
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+    <main className="p-8">
+      <h1>Вход</h1>
+      <form onSubmit={handle} className="space-y-4">
         <input
           type="email"
           placeholder="Email"
-          required
-          className="px-4 py-2 bg-white text-black rounded"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={e=>setEmail(e.target.value)}
+          className="border p-2 w-full"
         />
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500"
           disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2"
         >
-          {loading ? 'Отправляю…' : 'Войти'}
+          {loading ? 'Ждём...' : 'Войти по ссылке'}
         </button>
       </form>
     </main>
