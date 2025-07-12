@@ -1,6 +1,6 @@
-// app/auth/callback/page.tsx
 'use client'
 export const dynamic = 'force-dynamic'
+export const cache = 'no-store'
 
 import { useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -20,18 +20,16 @@ export default function AuthCallbackPage() {
       const { error } = await sb.auth.exchangeCodeForSession({})
       if (error) {
         console.error('Auth error:', error)
-        // вернёмся на страницу логина, передав returnTo
         const rt = params.get('returnTo') || '/'
         return router.replace(`/signin?returnTo=${encodeURIComponent(rt)}`)
       }
-      // после успешной аутентификации редиректим туда, откуда шли
       router.replace(params.get('returnTo') || '/')
     }
     finishAuth()
   }, [params, router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+    <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
       <p>Авторизуем…</p>
     </div>
   )
