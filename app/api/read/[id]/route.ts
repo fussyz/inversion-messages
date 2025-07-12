@@ -1,5 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { supabase } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+
+// создаём клиент прямо здесь, без алиасов
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!   // или PUBLIC-ключ, если сервис ролей не нужен
+)
 
 export async function GET(
   req: NextRequest,
@@ -7,13 +13,12 @@ export async function GET(
 ) {
   const id = params.id
 
-  // 1. получаем IP клиента (напр. X-Forwarded-For)
+  // Извлёк IP из заголовка
   const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.ip ||
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
     null
 
-  // 2. вытаскиваем запись
+  // 1) Берём запись
   const { data: message, error: fetchErr } = await supabase
     .from('messages')
     .select('*')
@@ -21,14 +26,11 @@ export async function GET(
     .single()
 
   if (fetchErr || !message) {
-    return NextResponse.json(
-      { error: fetchErr?.message ?? 'Not found' },
-      { status: 404 }
-    )
+    return NextResponse.json({ error: fetchErr?.message || 'Not found' }, { status: 404 })
   }
 
-  // 3. обновляем статистику
-  const { error: updateErr } = await supabase
+  // 2) Обновляем статистику
+  await supabase
     .from('messages')
     .update({
       views: message.views + 1,
@@ -37,11 +39,6 @@ export async function GET(
     })
     .eq('id', id)
 
-  if (updateErr) {
-    console.error('Failed to update stats:', updateErr)
-    // но картинку всё равно отдадим
-  }
-
-  // 4. отдаём URL картинки
+  // 3) Отдаём URL картинки
   return NextResponse.json({ image_url: message.image_url })
 }
