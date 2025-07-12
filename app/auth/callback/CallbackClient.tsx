@@ -12,8 +12,7 @@ export default function CallbackClient({ returnTo }: { returnTo: string }) {
   const router = useRouter()
 
   useEffect(() => {
-    // 1) читаем хэш-параметры
-    const hash   = window.location.hash.slice(1)          // access_token=…&refresh_token=…
+    const hash   = window.location.hash.slice(1)
     const params = Object.fromEntries(new URLSearchParams(hash))
 
     if (params.access_token && params.refresh_token) {
@@ -25,20 +24,18 @@ export default function CallbackClient({ returnTo }: { returnTo: string }) {
         .then(async ({ data, error }) => {
           console.log('setSession →', { data, error })
 
-          // 2) вручную ставим куки для middleware
-          //    без domain кука привязана к текущему хосту
-          document.cookie = `sb-access-token=${params.access_token}; path=/; secure; samesite=None`
-          document.cookie = `sb-refresh-token=${params.refresh_token}; path=/; secure; samesite=None`
+          // ==== ПРАВКА: ставим куку с domain=".inversion.one" ====
+          const cookieOpts = '; Path=/; Secure; SameSite=None; Domain=.inversion.one'
+          document.cookie = `sb-access-token=${params.access_token}${cookieOpts}`
+          document.cookie = `sb-refresh-token=${params.refresh_token}${cookieOpts}`
 
-          // 3) (опционально) сохраняем e-mail
           if (data?.user?.email) {
             await sb.from('subscribers').upsert({ email: data.user.email })
           }
 
-          // 4) небольшая задержка, чтобы кука успела заплюсоваться
+          // даём браузеру чуть времени на установку куки
           await new Promise(r => setTimeout(r, 200))
 
-          // 5) уходим на returnTo
           router.replace(returnTo)
         })
     } else {
@@ -48,7 +45,7 @@ export default function CallbackClient({ returnTo }: { returnTo: string }) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-black text-white">
-      Авторизую…
+      Авторизуем…
     </main>
   )
 }
