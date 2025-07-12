@@ -1,9 +1,10 @@
 // app/auth/callback/page.tsx
+
 'use client'
 export const dynamic = 'force-dynamic'
 
 import { useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -13,23 +14,33 @@ const supabase = createClient(
 
 export default function AuthCallbackPage() {
   const router = useRouter()
-  const params = useSearchParams()
 
   useEffect(() => {
+    // Парсим параметры из адресной строки
+    const params = new URLSearchParams(window.location.search)
     const token = params.get('token')
     const type  = params.get('type')
     const returnTo = params.get('returnTo') || '/signin'
 
     if (token && type) {
-      supabase.auth.verifyOtp({ token, type })
+      supabase.auth
+        .verifyOtp({ token, type })
         .then(({ error }) => {
-          if (error) router.replace('/signin')
-          else     router.replace(returnTo)
+          if (error) {
+            console.error('Auth error', error)
+            router.replace('/signin')
+          } else {
+            router.replace(returnTo)
+          }
         })
     } else {
       router.replace('/signin')
     }
-  }, [params, router])
+  }, [router])
 
-  return <p className="p-8 text-center">Авторизуемся…</p>
+  return (
+    <main className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+      <p>Авторизуемся…</p>
+    </main>
+  )
 }
