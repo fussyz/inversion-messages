@@ -1,31 +1,22 @@
-// File: app/admin/page.tsx
+// app/admin/page.tsx
 
-// 1) Настраиваем Leaflet-иконки (путь к marker-icon.png и shadow.png)
+'use client'               // ← ДОЛЖНО БЫТЬ ПЕРВЫМ, без кавычек других выражений
+
+// 1) Настраиваем Leaflet-иконки
 import '@/lib/leaflet'
 
-// 2) Динамический импорт React-Leaflet, чтобы обойти SSR
+// 2) Динамический импорт React-Leaflet
 import dynamic from 'next/dynamic'
 
-// 3) Остальные импорты React и Supabase
-'use client'
+// 3) Обычные React-хуки и Supabase-клиент
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-// 4) Динамически подгружаем компоненты карты только в браузере
-const MapContainer = dynamic(
-  () => import('react-leaflet').then((m) => m.MapContainer),
-  { ssr: false }
-)
-const TileLayer = dynamic(
-  () => import('react-leaflet').then((m) => m.TileLayer),
-  { ssr: false }
-)
-const Marker = dynamic(
-  () => import('react-leaflet').then((m) => m.Marker),
-  { ssr: false }
-)
+// 4) Подгружаем только в браузере
+const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
+const TileLayer    = dynamic(() => import('react-leaflet').then(m => m.TileLayer),    { ssr: false })
+const Marker       = dynamic(() => import('react-leaflet').then(m => m.Marker),       { ssr: false })
 
-// 5) Тип строки таблицы
 type MessageRow = {
   id: string
   image_url: string
@@ -36,7 +27,6 @@ type MessageRow = {
 
 export default function AdminPage() {
   const [rows, setRows] = useState<MessageRow[]>([])
-
   useEffect(() => {
     const sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,44 +46,20 @@ export default function AdminPage() {
     <main className="p-8 bg-gray-900 min-h-screen text-white">
       <h1 className="text-2xl mb-4">Admin: Messages</h1>
       <table className="w-full table-auto border-collapse">
-        <thead>
-          <tr>
-            <th className="px-4 py-2">ID</th>
-            <th className="px-4 py-2">Image</th>
-            <th className="px-4 py-2">Views</th>
-            <th className="px-4 py-2">Last Read</th>
-            <th className="px-4 py-2">IP</th>
-            <th className="px-4 py-2">Location</th>
-          </tr>
-        </thead>
+        <thead>{/* ...заголовки столбцов... */}</thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map(row => (
             <tr key={row.id} className="border-t border-gray-700">
-              <td className="px-4 py-2">{row.id}</td>
-              <td className="px-4 py-2">
-                <img
-                  src={row.image_url}
-                  alt=""
-                  className="h-12 w-12 object-cover rounded"
-                />
-              </td>
-              <td className="px-4 py-2">{row.views}</td>
-              <td className="px-4 py-2">
-                {row.last_read_at
-                  ? new Date(row.last_read_at).toLocaleString()
-                  : '—'}
-              </td>
-              <td className="px-4 py-2">{row.client_ip || '—'}</td>
+              {/* … ID, Image, Views, Last Read, IP … */}
               <td className="px-4 py-2">
                 {row.client_ip ? (
                   <MapContainer
-                    center={[0, 0]}
-                    zoom={2}
+                    center={[0, 0]} zoom={2}
                     style={{ height: 100, width: 150 }}
-                    whenCreated={(map) => {
+                    whenCreated={map => {
                       fetch(`https://ipapi.co/${row.client_ip}/json/`)
-                        .then((r) => r.json())
-                        .then((data: any) => {
+                        .then(r => r.json())
+                        .then(data => {
                           if (data.latitude && data.longitude) {
                             map.setView([data.latitude, data.longitude], 4)
                             new Marker([data.latitude, data.longitude]).addTo(map)
@@ -103,9 +69,7 @@ export default function AdminPage() {
                   >
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   </MapContainer>
-                ) : (
-                  '—'
-                )}
+                ) : '—'}
               </td>
             </tr>
           ))}
