@@ -23,7 +23,7 @@ html, body {
 }
 
 html {
-  background: #000 url('/noise.gif'); /* Добавим фон и для html */
+  background: #000; /* Убираем шум отсюда */
 }
 
 /* 4) Фон всего экрана — наша гифка */
@@ -40,22 +40,6 @@ body {
   align-items: center; /* Оставляем в центре */
   padding-bottom: 0; /* Убираем отступ снизу */
   color: #E802FF; /* Делаем весь текст фиолетовым */
-}
-
-/* Дополнительный слой шума поверх лого */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: url('/noise.gif');
-  background-repeat: repeat;
-  background-size: 500px auto;
-  opacity: 0.8; /* Контролируем видимость шума */
-  z-index: 1; /* Поверх формы */
-  pointer-events: none; /* Чтобы не блокировать клики по форме */
 }
 
 /* 5) Контейнер формы */
@@ -473,36 +457,6 @@ input[type="email"] {
   }
 }
 
-/* Лого на всю страницу */
-.logo-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0; /* Лого под всем */
-  overflow: hidden;
-}
-
-.main-logo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Растягиваем лого на всю страницу */
-  opacity: 0.6; /* Делаем более прозрачным чтобы шум был виден */
-  animation: logoFadeIn 1s ease-in-out;
-}
-
-@keyframes logoFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(1.1);
-  }
-  to {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-}
-
 /* ACCESS GRANTED текст */
 .access-granted-text {
   text-align: center;
@@ -545,14 +499,32 @@ input[type="email"] {
   fill: #E802FF; /* Фиолетовая иконка */
 }
 
-/* Любой другой текст */
-* {
-  color: #E802FF !important; /* Принудительно делаем весь текст фиолетовым */
+/* ЗАМЕНИ ПОСЛЕДНИЕ СТРОКИ НА ЭТИ: */
+
+/* Универсальный фон - ЛОГОТИП */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('/inversion-logo-purple-4k.jpg') center center / cover no-repeat;
+  z-index: -10; /* Логотип на заднем плане */
 }
 
-/* Исключения для элементов где цвет должен быть другим */
-.glitch-overlay,
-.logo-container,
-.main-logo {
-  color: initial !important; /* Восстанавливаем исходный цвет для этих элементов */
+/* Универсальный фон - ШУМ ПОВЕРХ ЛОГОТИПА (точно как на ACCESS GRANTED) */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('/noise.gif'); /* Только шум без черного фона */
+  background-repeat: repeat;
+  background-size: 500px auto; /* Точно такой же размер как на ACCESS GRANTED */
+  opacity: 0.7; /* Прозрачность чтобы логотип просвечивал */
+  z-index: -5; /* Шум впереди логотипа, но позади контента */
+  pointer-events: none;
 }

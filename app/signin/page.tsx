@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export default function SignInPage() {
@@ -34,15 +34,12 @@ export default function SignInPage() {
     }
     setLoading(true)
 
-    // 1. Запускаем глитч-эффект
     setShowGlitch(true)
     
     setTimeout(() => {
-      // 2. Убираем глитч и показываем "ACCESS GRANTED"
       setShowGlitch(false)
       setShowAccessGranted(true)
       
-      // 3. Отправляем email
       supabase.auth.signInWithOtp({
         email,
         options: {
@@ -54,22 +51,16 @@ export default function SignInPage() {
           alert(error.message)
           setShowAccessGranted(false)
         } else {
-          // 4. Через 2 секунды всё исчезает
           setTimeout(() => {
             setShowAccessGranted(false)
           }, 2000)
         }
       })
-    }, 500) // Глитч длится 0.5 секунды
+    }, 500)
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center">
-      {/* Лого */}
-      <div className="logo-container">
-        <img src="/inversion logo purple 4k.jpg" alt="Inversion Logo" className="main-logo" />
-      </div>
-      
       {/* Глитч-оверлей */}
       {showGlitch && <div className="glitch-overlay"></div>}
       
