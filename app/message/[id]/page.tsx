@@ -1,18 +1,32 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { notFound } from 'next/navigation'
-import MessageView        from '../MessageView'
-import { supabase }       from '../../lib/supabase-server'
+import { supabase } from '../../lib/supabase-server'
 
-export default async function Page({ params }: any) {
-  const id = params.id as string
+interface PageProps {
+  params: { id: string }
+}
 
-  const { data } = await supabase
+export default async function MessagePage({ params }: PageProps) {
+  const { data, error } = await supabase
     .from('messages')
-    .select('image_url')
-    .eq('id', id)
+    .select('*')
+    .eq('id', params.id)
     .single()
 
-  if (!data) notFound()
+  if (error || !data) {
+    notFound()
+  }
 
-  return <MessageView id={id} url={data.image_url} />
+  return (
+    <div className="min-h-screen p-8 bg-black text-purple-500">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6">Message</h1>
+        <div className="bg-gray-900 p-6 rounded-lg border border-purple-500">
+          <p className="text-lg leading-relaxed">{data.content}</p>
+          <div className="mt-4 text-sm text-gray-400">
+            Sent: {new Date(data.created_at).toLocaleString()}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
