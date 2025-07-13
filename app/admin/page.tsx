@@ -1,10 +1,6 @@
 // app/admin/page.tsx
 export const dynamic = 'force-dynamic'   // 👉 не SSG/SSR
 
-import AdminPageClient from './AdminPageClient'
-
-// Removed duplicate default export of AdminPageClient
-
 'use client'
 
 import { useEffect, useState } from 'react'
