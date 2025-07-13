@@ -2,35 +2,63 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-const sb = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 );
 
-export default function AuthCallbackPage() {
-  const params = useSearchParams();
+function CallbackContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    async function finish() {
-      const { error } = await sb.auth.exchangeCodeForSession({});
+    const handleAuthCallback = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
       if (error) {
-        console.error(error);
-        const rt = params.get("returnTo") || "/";
-        return router.replace(`/signin?returnTo=${encodeURIComponent(rt)}`);
+        console.error("Auth error:", error);
+        router.push("/signin");
+        return;
       }
-      router.replace(params.get("returnTo") || "/");
-    }
-    finish();
-  }, [params, router]);
+
+      if (data.session) {
+        const returnTo = searchParams.get("returnTo") || "/admin";
+        router.push(returnTo);
+      } else {
+        router.push("/signin");
+      }
+    };
+
+    handleAuthCallback();
+  }, [router, searchParams]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
-      <p>Авторизуем…</p>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+        <p className="mt-4 text-white">Authenticating...</p>
+      </div>
     </div>
+  );
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+            <p className="mt-4 text-white">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <CallbackContent />
+    </Suspense>
   );
 }
