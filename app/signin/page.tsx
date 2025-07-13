@@ -1,120 +1,87 @@
 'use client'
 
-import { useState, FormEvent, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isValidEmail, setIsValidEmail] = useState(false)
-  const [showGlitch, setShowGlitch] = useState(false)
-  const [showAccessGranted, setShowAccessGranted] = useState(false)
+  const [message, setMessage] = useState('')
   const router = useRouter()
 
-  useEffect(() => {
-    setIsValidEmail(validateEmail(email))
-  }, [email])
-
-  const validateEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return regex.test(email)
-  }
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isValidEmail) {
-      alert('Please enter a valid email')
-      return
-    }
     setLoading(true)
+    setMessage('')
 
-    // 1. Запускаем глитч-эффект
-    setShowGlitch(true)
-    
-    setTimeout(() => {
-      // 2. Убираем глитч и показываем "ACCESS GRANTED"
-      setShowGlitch(false)
-      setShowAccessGranted(true)
-      
-      // 3. Отправляем email
-      supabase.auth.signInWithOtp({
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=/admin`,
-        },
-      }).then(({ error }) => {
-        setLoading(false)
-        if (error) {
-          alert(error.message)
-          setShowAccessGranted(false)
-        } else {
-          // 4. Через 2 секунды всё исчезает
-          setTimeout(() => {
-            setShowAccessGranted(false)
-          }, 2000)
-        }
+        password,
       })
-    }, 500) // Глитч длится 0.5 секунды
+
+      if (error) {
+        setMessage(error.message)
+      } else {
+        router.push('/admin')
+      }
+    } catch (error) {
+      setMessage('An error occurred during sign in')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      {/* Лого */}
-      <div className="logo-container">
-        <img src="/inversion logo purple 4k.jpg" alt="Inversion Logo" className="main-logo" />
-      </div>
-      
-      {/* Глитч-оверлей */}
-      {showGlitch && <div className="glitch-overlay"></div>}
-      
-      {/* ACCESS GRANTED сообщение */}
-      {showAccessGranted && (
-        <div className="access-granted-overlay">
-          <div className="access-granted-text">
-            <div className="access-granted-title">ACCESS GRANTED</div>
-            <div className="access-granted-subtitle">Link sent to your email</div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="max-w-md w-full space-y-8 p-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-purple-500">
+            Sign in to your account
+          </h2>
         </div>
-      )}
-      
-      {/* Основная форма */}
-      <form onSubmit={handleSubmit} className={`form-container ${showGlitch ? 'glitching' : ''} ${showAccessGranted ? 'hidden' : ''}`}>
-        <div className="input-wrapper">
-          <input
-            type="email"
-            placeholder="Provide your email to continue"
-            required
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-          {isValidEmail && (
+        <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
+          <div>
+            <input
+              type="email"
+              required
+              className="appearance-none rounded-md relative block w-full px-3 py-2 border border-purple-500 placeholder-gray-400 text-white bg-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              required
+              className="appearance-none rounded-md relative block w-full px-3 py-2 border border-purple-500 placeholder-gray-400 text-white bg-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div>
             <button
               type="submit"
-              className="submit-button"
               disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="size-6 violet-checkmark"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+          {message && (
+            <div className="text-red-500 text-sm text-center">{message}</div>
           )}
-        </div>
-      </form>
-    </main>
+        </form>
+      </div>
+    </div>
   )
 }
