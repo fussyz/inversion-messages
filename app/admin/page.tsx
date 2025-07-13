@@ -3,9 +3,7 @@ export const dynamic = 'force-dynamic'   // 👉 не SSG/SSR
 
 import AdminPageClient from './AdminPageClient'
 
-export default function AdminPage() {
-  return <AdminPageClient />
-}
+// Removed duplicate default export of AdminPageClient
 
 'use client'
 
@@ -20,7 +18,7 @@ const supabase = createClient(
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<{ email: string } | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -33,7 +31,9 @@ export default function AdminPage() {
           return
         }
         
-        setUser(session.user)
+        if (session.user?.email) {
+          setUser({ email: session.user.email })
+        }
         setLoading(false)
       } catch (error) {
         console.error('Auth error:', error)
