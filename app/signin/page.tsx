@@ -1,12 +1,11 @@
-// app/signin/page.tsx
 'use client'
-export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, FormEvent, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { CheckIcon } from '@heroicons/react/24/solid'
 
-const sb = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 )
@@ -14,46 +13,66 @@ const sb = createClient(
 export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const params = useSearchParams()
+  const [isValidEmail, setIsValidEmail] = useState(false) // Добавим состояние для валидации email
   const router = useRouter()
 
-  // из ?returnTo=…
-  const returnTo = params.get('returnTo') ?? '/'
+  useEffect(() => {
+    // Проверяем валидность email при изменении
+    setIsValidEmail(validateEmail(email))
+  }, [email])
 
-  const handle = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: {
-        // прокидываем динамический returnTo
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback?returnTo=${encodeURIComponent(returnTo)}`
-      }
-    })
-    if (error) alert(error.message)
-    else alert('Ссылка отправлена на почту')
-    setLoading(false)
+  const validateEmail = (email: string) => {
+    // Простая проверка email
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return regex.test(email)
   }
 
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!isValidEmail) {
+      alert('Пожалуйста, введите корректный email');
+      return;
+    }
+    setLoading(true);
+
+    // Add glitch effect
+    const formContainer = document.querySelector('.form-container');
+    if (formContainer) {
+      formContainer.classList.add('teleporting');
+    }
+
+    setTimeout(async () => {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=/admin`,
+        },
+      });
+      setLoading(false);
+      if (formContainer) {
+        formContainer.classList.remove('teleporting');
+      }
+      if (error) alert(error.message);
+      else alert('Проверьте почту — вам пришёл magic link');
+    }, 1000); // Adjust the timeout as needed
+  };
+
   return (
-    <main className="p-8">
-      <h1>Вход</h1>
-      <form onSubmit={handle} className="space-y-4">
+    <main className="min-h-screen flex items-center justify-center">
+      <form onSubmit={handleSubmit} className="form-container">
         <input
           type="email"
-          placeholder="Email"
+          placeholder="Enter your email"
+          required
           value={email}
-          onChange={e=>setEmail(e.target.value)}
-          className="border p-2 w-full"
+          onChange={e => setEmail(e.target.value)}
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2"
-        >
-          {loading ? 'Ждём...' : 'Войти по ссылке'}
-        </button>
+        {isValidEmail && ( // Отображаем кнопку только если email валидный
+          <button type="submit" className="receive-message-button">
+            Sign In
+          </button>
+        )}
       </form>
     </main>
-  )
+  );
 }

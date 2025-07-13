@@ -6,6 +6,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,       // → TypeScript-ошибки не валят билд
   },
+  images: {
+    unoptimized: true
+  }
 }
 
 module.exports = nextConfig
