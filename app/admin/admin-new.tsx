@@ -64,10 +64,15 @@ export default function AdminNewPage() {
         }
 
         setShowQRModal(false)
+        if (!supabase) {
+          setError('Supabase client is not initialized. Check environment variables.')
+          setLoading(false)
+          return
+        }
         const { data: { session }, error } = await supabase.auth.getSession()
         if (error) {
           console.error('Auth error:', error)
-          setError('Authentication error: ' + error.message)
+          setError('Authentication error: ' + (error?.message || String(error)))
           setLoading(false)
           return
         }
@@ -77,6 +82,10 @@ export default function AdminNewPage() {
           return
         }
         
+        if (!session) {
+          router.push('/signin')
+          return
+        }
         if (session.user?.email !== 'semoo.smm@gmail.com') {
           router.push('/signin')
           return
@@ -491,8 +500,8 @@ export default function AdminNewPage() {
       fontFamily: 'monospace',
       fontSize: '13px'
     }}>
-      {record.viewer_email ? (
-        <span style={{ color: '#60a5fa' }}>{record.viewer_email}</span>
+      {record.email ? (
+        <span style={{ color: '#60a5fa' }}>{record.email}</span>
       ) : (
         <span style={{ color: '#9ca3af' }}>Not viewed yet</span>
       )}
@@ -545,6 +554,14 @@ export default function AdminNewPage() {
     }
   }
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') forceCloseModal()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
+
   if (loading) {
     return (
       <div style={{
@@ -566,7 +583,6 @@ export default function AdminNewPage() {
             animation: 'spin 1s linear infinite'
           }}></div>
           <h2 style={{ marginTop: '20px', fontWeight: '500' }}>Loading...</h2>
-        </div>
       </div>
     )
   }
@@ -1624,6 +1640,7 @@ export default function AdminNewPage() {
                           backgroundColor: 'transparent'
                         }}
                       />
+                      {/* Выпадающий список цветов */}
                       <select
                         value={qrBgColor}
                         onChange={e => setQrBgColor(e.target.value)}
@@ -1641,232 +1658,164 @@ export default function AdminNewPage() {
                         <option value="#ffffff">White</option>
                         <option value="#000000">Black</option>
                         <option value="transparent">Transparent</option>
-                        <option value={qrBgColor}>{qrBgColor === 'transparent' ? '' : qrBgColor}</option>
+                        <option value="#f3f4f6">Gray</option>
+                        <option value="#fbbf24">Yellow</option>
+                        <option value="#3b82f6">Blue</option>
+                        <option value="#8b5cf6">Purple</option>
                       </select>
                     </div>
                   </div>
                 </div>
-                
-                <div style={{ marginTop: '15px' }}>
+                {/* Logo upload */}
+                <div style={{ marginTop: '10px' }}>
                   <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
-                    Logo (Optional)
+                    Logo (optional)
                   </label>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setQrLogo(file);
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setQrLogoPreview(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        } else {
-                          setQrLogoPreview('');
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files?.[0] || null
+                      setQrLogo(file)
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onloadend = () => {
+                          setQrLogoPreview(reader.result as string)
                         }
-                      }}
-                      style={{ 
-                        display: 'none'
-                      }}
-                      id="qr-logo-input"
-                    />
-                    <label 
-                      htmlFor="qr-logo-input"
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        backgroundColor: '#1f2937',
-                        border: '1px dashed #4b5563',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '40px'
-                      }}
-                    >
-                      {qrLogoPreview ? 'Change Logo' : 'Select Logo'}
-                    </label>
-                    
-                    {qrLogoPreview && (
-                      <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        border: '1px solid #4b5563'
-                      }}>
-                        <img 
-                          src={qrLogoPreview} 
-                          alt="Logo Preview" 
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover' 
-                          }} 
-                        />
-                        <button
-                          onClick={() => {
-                            setQrLogo(null);
-                            setQrLogoPreview('');
-                          }}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            backgroundColor: 'rgba(0,0,0,0.6)',
-                            color: 'white',
-                            border: 'none',
-                            width: '20px',
-                            height: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}
-                          title="Remove Logo"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                        reader.readAsDataURL(file)
+                      } else {
+                        setQrLogoPreview('')
+                      }
+                    }}
+                    style={{
+                      display: 'block',
+                      backgroundColor: '#111827',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                      padding: '8px',
+                      marginBottom: '8px'
+                    }}
+                  />
+                  {qrLogoPreview && (
+                    <div style={{ marginTop: '8px' }}>
+                      <img
+                        src={qrLogoPreview}
+                        alt="Logo Preview"
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          objectFit: 'contain',
+                          borderRadius: '8px',
+                          border: '1px solid #374151'
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          setQrLogo(null)
+                          setQrLogoPreview('')
+                        }}
+                        style={{
+                          marginLeft: '12px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}
+                        title="Remove logo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
                 </div>
-                
+                {/* Button to regenerate QR code with new settings */}
                 <button
                   onClick={async () => {
-                    const viewLink = `${window.location.origin}/view/${currentImageId}`;
-                    const newQrDataURL = await generateQRCode(viewLink);
-                    setQRCodeDataURL(newQrDataURL);
+                    if (generatedLink) {
+                      const newQR = await generateQRCode(generatedLink)
+                      setQRCodeDataURL(newQR)
+                    }
                   }}
                   style={{
-                    width: '100%',
-                    padding: '10px',
+                    marginTop: '18px',
                     backgroundColor: '#3b82f6',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    padding: '10px 18px',
                     fontWeight: '600',
-                    fontSize: '14px',
-                    marginTop: '15px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#2563eb'
+                  }}
+                  onMouseLeave={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#3b82f6'
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Apply Changes
+                  Regenerate QR Code
                 </button>
               </div>
-              
-              <div style={{ marginBottom: '20px' }}>
+              {/* Download and copy buttons */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px', justifyContent: 'center' }}>
                 <button
                   onClick={downloadQRCode}
                   style={{
-                    width: '100%',
-                    padding: '12px',
                     backgroundColor: '#059669',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    padding: '10px 18px',
                     fontWeight: '600',
+                    cursor: 'pointer',
                     fontSize: '15px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = '#047857'
+                    (e.target as HTMLElement).style.backgroundColor = '#047857'
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = '#059669'
+                    (e.target as HTMLElement).style.backgroundColor = '#059669'
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download QR Code
+                  Download QR
                 </button>
-              </div>
-              
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={generatedLink}
-                  readOnly
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    paddingRight: '110px',
-                    backgroundColor: '#111827',
-                    border: '1px solid #374151',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontSize: '14px',
-                    fontFamily: 'monospace'
-                  }}
-                />
                 <button
                   onClick={() => copyToClipboard(generatedLink)}
                   style={{
-                    position: 'absolute',
-                    top: '50%',
-                    right: '12px',
-                    transform: 'translateY(-50%)',
-                    backgroundColor: 'transparent',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
                     border: 'none',
-                    color: '#60a5fa',
-                    cursor: 'pointer',
-                    fontSize: '14px',
+                    borderRadius: '8px',
+                    padding: '10px 18px',
                     fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    transition: 'all 0.2s'
                   }}
-                  title="Copy link"
+                  onMouseEnter={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#1d4ed8'
+                  }}
+                  onMouseLeave={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#2563eb'
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                  </svg>
                   Copy Link
                 </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* CSS анимаций и стилей для таблицы и модального окна */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `
-      }} />
+        </div>
+      )}
     </div>
   )
 }
