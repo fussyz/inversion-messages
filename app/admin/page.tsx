@@ -401,7 +401,7 @@ export default function AdminPage() {
                       
                       <td className="py-3 px-4">
                         {record.image_url ? (
-                          <div className="w-8 h-8 border border-purple-500 rounded overflow-hidden bg-gray-800">
+                          <div className="w-6 h-6 border border-purple-500 rounded overflow-hidden bg-gray-800">
                             <img 
                               src={record.image_url} 
                               alt="Preview" 
@@ -409,8 +409,8 @@ export default function AdminPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
-                            <span className="text-gray-400 text-sm">❓</span>
+                          <div className="w-6 h-6 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
+                            <span className="text-gray-400 text-xs">❓</span>
                           </div>
                         )}
                       </td>
