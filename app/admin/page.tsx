@@ -207,12 +207,10 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f051d] via-[#2f184b] to-[#1a0e2e]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 to-purple-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-fuchsia-400 mx-auto"></div>
-          <p className="mt-6 text-2xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-pulse">
-            Loading...
-          </p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-pink-500 mx-auto"></div>
+          <p className="mt-6 text-2xl font-bold text-white">Loading...</p>
         </div>
       </div>
     )
@@ -222,7 +220,7 @@ export default function AdminPage() {
     <div className="min-h-screen p-8 bg-gradient-to-br from-[#170048] via-[#1d0736] to-[#0f051d] text-white">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10">
-          <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 bg-clip-text text-transparent tracking-tight drop-shadow-lg">
+          <h1 className="text-5xl md:text-7xl font-black bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 tracking-tight drop-shadow-lg">
             Admin Dashboard
           </h1>
           <button
@@ -293,7 +291,9 @@ export default function AdminPage() {
         {/* Records Table */}
         <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 shadow-lg">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-purple-300">All Records ({messages.length})</h2>
+            <h2 className="text-3xl font-bold text-purple-300">
+              All Records ({messages.length})
+            </h2>
             <button
               onClick={loadMessages}
               disabled={loadingMessages}
