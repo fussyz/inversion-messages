@@ -1,47 +1,33 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-// Для API роутов используем серверную переменную без NEXT_PUBLIC_
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from('subscribers')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email } = await request.json()
-
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+    
+    // Проверяем, не администратор ли это
+    if (email === "semoo.smm@gmail.com") {
+      return NextResponse.json({ success: true })
     }
-
-    const { data, error } = await supabase
+    
+    // Сохраняем email в таблицу subscribers
+    const { error } = await supabase
       .from('subscribers')
-      .insert([{ email }])
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
+      .insert([{ email, created_at: new Date().toISOString() }])
+    
+    if (error) throw error
+    
+    return NextResponse.json({ success: true })
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error saving subscriber:', error)
+    return NextResponse.json(
+      { error: 'Failed to save subscriber' },
+      { status: 500 }
+    )
   }
 }

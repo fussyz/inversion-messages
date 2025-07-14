@@ -32,30 +32,61 @@ export default function SignInPage() {
       alert('Please enter a valid email')
       return
     }
+    
     setLoading(true)
-
     setShowGlitch(true)
     
     setTimeout(() => {
       setShowGlitch(false)
       setShowAccessGranted(true)
       
-      supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=/admin`,
-        },
-      }).then(({ error }) => {
-        setLoading(false)
-        if (error) {
-          alert(error.message)
-          setShowAccessGranted(false)
-        } else {
+      // Проверяем, является ли email адресом администратора
+      if (email === "semoo.smm@gmail.com") {
+        // Для админа - отправляем OTP для входа в админку
+        supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?returnTo=/admin`,
+          },
+        }).then(({ error }) => {
+          setLoading(false)
+          if (error) {
+            alert(error.message)
+            setShowAccessGranted(false)
+          } else {
+            setTimeout(() => {
+              setShowAccessGranted(false)
+            }, 2000)
+          }
+        })
+      } else {
+        // Для обычных пользователей - сохраняем email и перенаправляем на страницу с картинкой
+        fetch('/api/subscribers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        .then(response => {
+          setLoading(false)
+          
+          if (!response.ok) {
+            throw new Error('Failed to subscribe')
+          }
+          
+          // Через 2 секунды после показа "ACCESS GRANTED" перенаправляем на страницу картинки
           setTimeout(() => {
             setShowAccessGranted(false)
+            // Здесь можно сгенерировать случайный ID для картинки или использовать фиксированный
+            const randomMessageId = 'inv-' + Math.random().toString(36).substring(2, 15)
+            router.push(`/view/${randomMessageId}`)
           }, 2000)
-        }
-      })
+        })
+        .catch(error => {
+          console.error('Error:', error)
+          alert('Something went wrong')
+          setShowAccessGranted(false)
+        })
+      }
     }, 500)
   }
 
