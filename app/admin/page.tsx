@@ -656,26 +656,3 @@ export default function AdminPage() {
     </div>
   )
 }
-
-// Выполни in Supabase SQL Editor:
-// CREATE TABLE images (
-//   id SERIAL PRIMARY KEY,
-//   filename TEXT NOT NULL,
-//   original_name TEXT NOT NULL,
-//   url TEXT NOT NULL,
-//   delete_after_view BOOLEAN DEFAULT FALSE,
-//   expires_at TIMESTAMP,
-//   viewed_at TIMESTAMP,
-//   viewer_ip TEXT,
-//   created_at TIMESTAMP DEFAULT NOW()
-// );
-
-// Проверь что bucket существует:
-// SELECT * FROM storage.buckets WHERE id = 'images';
-
-// Если bucket не существует, создай:
-// INSERT INTO storage.buckets (id, name, public) VALUES ('images', 'images', true);
-
-// Добавь политики безопасности:
-// CREATE POLICY "Allow authenticated uploads" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'images');
-// CREATE POLICY "Allow public access" ON storage.objects FOR SELECT USING (bucket_id = 'images');
