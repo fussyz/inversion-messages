@@ -309,8 +309,7 @@ export default function AdminPage() {
           >
             Sign Out
           </button>
-        </div
-        
+        </div>
         {/* Welcome блок */}
         {user && (
           <div className="bg-gray-900/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 mb-12 shadow-2xl">
