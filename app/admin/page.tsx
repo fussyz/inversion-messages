@@ -266,63 +266,69 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-purple-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0f051d] via-[#2f184b] to-[#1a0e2e] animate-gradient-x">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto"></div>
-          <p className="mt-4 text-purple-400 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-fuchsia-400 shadow-[0_0_24px_6px_rgba(236,72,153,0.55)] mx-auto"></div>
+          <p className="mt-6 text-2xl font-bold bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-pulse drop-shadow-[0_0_24px_rgba(236,72,153,0.55)]">
+            Loading...
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 to-purple-900 text-white">
+    <div className="min-h-screen p-8 bg-gradient-to-br from-[#170048] via-[#1d0736] to-[#0f051d] text-white animate-gradient-x">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Admin Dashboard</h1>
+        <div className="flex justify-between items-center mb-10">
+          <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 bg-clip-text text-transparent neon-glow drop-shadow-[0_0_40px_rgba(236,72,153,0.7)] animate-gradient-text tracking-tight">
+            Admin Dashboard
+          </h1>
           <button
             onClick={handleLogout}
-            className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all font-semibold"
+            className="px-7 py-3 bg-gradient-to-br from-pink-600 via-fuchsia-500 to-purple-700 text-white rounded-2xl font-bold shadow-[0_0_24px_4px_rgba(236,72,153,0.25)] hover:from-fuchsia-700 hover:to-purple-900 hover:shadow-fuchsia-500/80 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60 transition-all duration-150"
           >
             Sign Out
           </button>
         </div>
-        
+
         {user && (
-          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-lg border border-purple-500/30 mb-8">
-            <p className="text-lg mb-2">Welcome to the admin panel!</p>
-            <p>Logged in as: <span className="font-mono text-purple-300">{user.email}</span></p>
+          <div className="bg-white/10 backdrop-blur-2xl border border-fuchsia-400/30 rounded-2xl p-7 mb-10 shadow-xl shadow-fuchsia-900/20 glassmorphism-panel animate-fadein">
+            <p className="text-2xl font-semibold mb-1 text-fuchsia-200 drop-shadow-[0_0_8px_rgba(236,72,153,0.4)]">Welcome to the admin panel!</p>
+            <p className="text-lg">
+              Logged in as: <span className="font-mono text-fuchsia-400 text-xl">{user.email}</span>
+            </p>
           </div>
         )}
 
         {/* Панель загрузки изображений */}
-        <div className="relative bg-gradient-to-br from-[#231942]/80 via-[#5e239d]/60 to-[#2d0d3a]/90 shadow-xl shadow-purple-900/30 border border-purple-500/30 rounded-2xl p-8 mb-8 overflow-hidden">
-          <div className="absolute -inset-0.5 pointer-events-none z-0 blur-lg opacity-60" style={{background: "radial-gradient(ellipse 60% 80% at 80% 30%, #a21caf55 0%, #f472b655 60%, transparent 100%)"}}></div>
-          <h2 className="relative z-10 text-2xl font-semibold mb-6 text-purple-200 drop-shadow-[0_1px_10px_rgba(168,85,247,0.6)]">Upload Image</h2>
-          <div className="relative z-10 space-y-4">
+        <div className="relative bg-gradient-to-br from-[#241050]/80 via-[#5e239d]/60 to-[#2d0d3a]/90 shadow-2xl shadow-fuchsia-900/50 border border-fuchsia-400/30 rounded-3xl p-10 mb-12 overflow-hidden neon-panel animate-fadein">
+          <div className="absolute -inset-1 pointer-events-none z-0 blur-2xl opacity-70" style={{background: "radial-gradient(ellipse 80% 100% at 80% 30%, #e879f955 0%, #a21caf55 50%, transparent 100%)"}}></div>
+          <h2 className="relative z-10 text-3xl font-bold mb-7 text-fuchsia-200 drop-shadow-[0_1px_24px_rgba(236,72,153,0.7)] animate-pulse">Upload Image</h2>
+          <div className="relative z-10 space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">Select Image</label>
+              <label className="block text-base font-bold mb-2 text-fuchsia-300">Select Image</label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-purple-700 file:text-white hover:file:bg-fuchsia-600/90 file:shadow-[0_0_8px_2px_rgba(168,85,247,0.5)] transition-all duration-200 focus:ring-2 focus:ring-purple-400/70"
+                className="block w-full text-base text-gray-100 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-gradient-to-tr from-fuchsia-600 via-purple-700 to-blue-700 file:text-white hover:file:bg-fuchsia-400/80 file:shadow-[0_0_16px_2px_rgba(236,72,153,0.4)] transition-all duration-200 focus:ring-2 focus:ring-fuchsia-400/70"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="flex items-center space-x-2">
+                <label className="flex items-center space-x-3 text-fuchsia-200">
                   <input
                     type="checkbox"
                     checked={deleteAfterView}
                     onChange={(e) => setDeleteAfterView(e.target.checked)}
-                    className="form-checkbox h-5 w-5 text-purple-500 border border-purple-400 rounded focus:ring-2 focus:ring-purple-400 transition-shadow shadow-purple-500/30 focus:shadow-[0_0_8px_1px_rgba(168,85,247,0.5)]"
+                    className="form-checkbox h-6 w-6 text-fuchsia-500 border border-fuchsia-400 rounded focus:ring-2 focus:ring-fuchsia-400 transition-shadow shadow-fuchsia-500/30 focus:shadow-[0_0_8px_2px_rgba(236,72,153,0.5)]"
                   />
-                  <span>Delete after opening</span>
+                  <span className="font-medium">Delete after opening</span>
                 </label>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-base font-bold mb-2 text-fuchsia-300">
                   Expiration (days, 0 = forever)
                 </label>
                 <input
@@ -330,14 +336,14 @@ export default function AdminPage() {
                   min="0"
                   value={expirationDays}
                   onChange={(e) => setExpirationDays(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-[#1a1331]/80 border border-purple-400/40 rounded-lg text-white font-mono focus:border-purple-400 focus:outline-none focus:shadow-[0_0_0_2px_rgba(168,85,247,0.5)] transition-all"
+                  className="w-full px-4 py-3 bg-[#1a1331]/80 border border-fuchsia-400/40 rounded-xl text-white font-mono focus:border-fuchsia-400 focus:outline-none focus:shadow-[0_0_0_3px_rgba(236,72,153,0.6)] transition-all text-lg"
                 />
               </div>
             </div>
             <button
               onClick={handleFileUpload}
               disabled={!selectedFile || uploading}
-              className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-purple-500 via-fuchsia-700 to-purple-800 shadow-[0_0_12px_2px_rgba(168,85,247,0.6)] text-white transition-all duration-200 hover:from-fuchsia-700 hover:to-purple-900 hover:shadow-purple-500/60 focus:outline-none focus:ring-2 focus:ring-purple-400/80 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-fuchsia-400 via-purple-500 to-blue-600 shadow-[0_0_24px_6px_rgba(236,72,153,0.7)] text-white transition-all duration-200 hover:from-fuchsia-500 hover:to-blue-700 hover:shadow-fuchsia-400/80 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/80 disabled:opacity-60 disabled:cursor-not-allowed animate-glow"
             >
               {uploading ? 'Uploading...' : 'Upload Image'}
             </button>
@@ -345,45 +351,45 @@ export default function AdminPage() {
         </div>
 
         {/* Таблица записей */}
-        <div className="bg-gradient-to-br from-[#181622]/90 to-[#301c3a]/95 backdrop-blur-xl shadow-2xl shadow-purple-950/40 border border-purple-700/20 rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-purple-200 drop-shadow-[0_1px_10px_rgba(168,85,247,0.5)]">All Records ({messages.length})</h2>
+        <div className="bg-gradient-to-br from-[#181622]/90 via-[#2e174a]/90 to-[#301c3a]/95 backdrop-blur-2xl shadow-[0_8px_64px_0_rgba(236,72,153,0.13)] border border-fuchsia-400/20 rounded-3xl p-8 neon-card animate-fadein">
+          <div className="flex justify-between items-center mb-7">
+            <h2 className="text-3xl font-bold text-fuchsia-200 drop-shadow-[0_1px_16px_rgba(236,72,153,0.7)]">All Records ({messages.length})</h2>
             <button
               onClick={loadMessages}
               disabled={loadingMessages}
-              className="px-4 py-2 bg-purple-700 shadow-[0_0_12px_2px_rgba(168,85,247,0.3)] text-white rounded-xl hover:bg-fuchsia-600 transition-all disabled:opacity-50"
+              className="px-6 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-700 shadow-[0_0_16px_2px_rgba(236,72,153,0.4)] text-white rounded-2xl font-bold hover:from-fuchsia-400 hover:to-blue-500 hover:shadow-fuchsia-400/80 transition-all disabled:opacity-50"
             >
               {loadingMessages ? 'Loading...' : 'Refresh'}
             </button>
           </div>
           {loadingMessages ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-              <p className="mt-2">Loading records...</p>
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-fuchsia-400 mx-auto shadow-[0_0_24px_6px_rgba(236,72,153,0.3)]"></div>
+              <p className="mt-4 text-fuchsia-300 text-lg">Loading records...</p>
             </div>
           ) : messages.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No records yet.</p>
+            <p className="text-fuchsia-300 text-center py-10 text-lg">No records yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left rounded-2xl overflow-hidden bg-gray-900/60 shadow-lg shadow-purple-900/30 backdrop-blur-md border-separate border-spacing-0">
+              <table className="w-full text-left rounded-2xl overflow-hidden bg-[#19132a]/80 shadow-lg shadow-fuchsia-900/30 backdrop-blur-md border-separate border-spacing-0 neon-table">
                 <thead>
-                  <tr className="">
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 first:rounded-tl-2xl last:rounded-tr-2xl">ID</th>
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90">Preview</th>
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90">Settings</th>
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90">QR Code</th>
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90">IP Address</th>
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90">Stats</th>
-                    <th className="py-4 px-4 text-purple-300 font-semibold border-b border-purple-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 last:rounded-tr-2xl">Actions</th>
+                  <tr>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 first:rounded-tl-2xl last:rounded-tr-2xl text-lg">ID</th>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 text-lg">Preview</th>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 text-lg">Settings</th>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 text-lg">QR Code</th>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 text-lg">IP Address</th>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 text-lg">Stats</th>
+                    <th className="py-5 px-5 text-fuchsia-300 font-bold border-b border-fuchsia-900/60 bg-gradient-to-r from-[#232146]/80 to-[#2b183a]/90 last:rounded-tr-2xl text-lg">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {messages.map((record, i) => (
                     <tr
                       key={record.id}
-                      className="group border-b border-purple-900/30 last:border-0 transition-all duration-200 hover:scale-[1.012] hover:z-10 hover:shadow-[0_4px_40px_0_rgba(168,85,247,0.10)] hover:bg-purple-900/10 hover:backdrop-blur-[2px] relative"
+                      className="group border-b border-fuchsia-900/30 last:border-0 transition-all duration-200 hover:scale-[1.015] hover:z-10 hover:shadow-[0_8px_40px_0_rgba(236,72,153,0.25)] hover:bg-fuchsia-700/10 hover:backdrop-blur-[3px] relative animate-table-row"
                     >
-                      <td className="py-4 px-4 text-purple-200 border-r border-purple-900/10 transition-all group-hover:bg-purple-900/10 group-hover:backdrop-blur-sm rounded-l-xl">
+                      <td className="py-4 px-5 text-fuchsia-200 border-r border-fuchsia-900/10 transition-all group-hover:bg-fuchsia-800/10 group-hover:backdrop-blur-sm rounded-l-xl font-mono text-base">
                         {record.image_url ? (
                           <a
                             href={`/view/${record.id}`}
@@ -397,9 +403,9 @@ export default function AdminPage() {
                           <span className="font-bold">{record.id}</span>
                         )}
                       </td>
-                      <td className="py-4 px-4 border-r border-purple-900/10">
+                      <td className="py-4 px-5 border-r border-fuchsia-900/10">
                         {record.image_url ? (
-                          <div className="w-10 h-10 border border-purple-500/60 rounded-lg overflow-hidden bg-gray-900 shadow-[0_0_10px_0_rgba(168,85,247,0.12)]">
+                          <div className="w-12 h-12 border-2 border-fuchsia-400/60 rounded-xl overflow-hidden bg-[#1e1038] shadow-[0_0_16px_0_rgba(236,72,153,0.2)]">
                             <img
                               src={record.image_url}
                               alt="Preview"
@@ -407,28 +413,28 @@ export default function AdminPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-10 h-10 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
-                            <span className="text-gray-400 text-xs">❓</span>
+                          <div className="w-12 h-12 border border-gray-600 rounded-xl flex items-center justify-center bg-gray-800">
+                            <span className="text-fuchsia-400 text-xl">❓</span>
                           </div>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-gray-300 border-r border-purple-900/10">
-                        {record.auto_delete && <div className="text-red-400">🗑️ Delete after view</div>}
+                      <td className="py-4 px-5 text-gray-300 border-r border-fuchsia-900/10 text-base">
+                        {record.auto_delete && <div className="text-red-400 font-bold">🗑️ Delete after view</div>}
                         {record.expire_at && (
-                          <div className="text-yellow-400">
+                          <div className="text-yellow-400 font-semibold">
                             ⏰ Expires: {new Date(record.expire_at).toLocaleDateString()}
                           </div>
                         )}
                         {record.days_to_live && (
-                          <div className="text-gray-400">
+                          <div className="text-fuchsia-300">
                             📅 Days: {record.days_to_live}
                           </div>
                         )}
                         {!record.auto_delete && !record.expire_at && (
-                          <span className="text-green-400">♾️ Permanent</span>
+                          <span className="text-green-400 font-bold">♾️ Permanent</span>
                         )}
                       </td>
-                      <td className="py-4 px-4 border-r border-purple-900/10">
+                      <td className="py-4 px-5 border-r border-fuchsia-900/10">
                         {record.image_url && (
                           <button
                             onClick={(e) => {
@@ -436,45 +442,45 @@ export default function AdminPage() {
                               e.stopPropagation()
                               showQRForImage(record.id)
                             }}
-                            className="px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow-[0_0_8px_1px_rgba(34,197,94,0.3)] hover:from-green-600 hover:to-emerald-700 hover:shadow-green-400/40 transition-all text-sm font-semibold"
+                            className="px-4 py-2 bg-gradient-to-r from-green-400 via-emerald-500 to-fuchsia-500 text-white rounded-xl shadow-[0_0_16px_2px_rgba(34,197,94,0.23)] hover:from-fuchsia-400 hover:to-emerald-500 hover:shadow-green-400/60 transition-all text-base font-bold animate-glow"
                           >
                             📱 Show QR
                           </button>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-gray-300 border-r border-purple-900/10 font-mono text-xs">
+                      <td className="py-4 px-5 text-gray-300 border-r border-fuchsia-900/10 font-mono text-sm">
                         {record.client_ip && (
-                          <div className="font-mono text-sm">🌐 {record.client_ip}</div>
+                          <div className="font-mono text-base">🌐 {record.client_ip}</div>
                         )}
                         {record.ip_address && (
-                          <div className="font-mono text-sm">🌐 {record.ip_address}</div>
+                          <div className="font-mono text-base">🌐 {record.ip_address}</div>
                         )}
                         {!record.client_ip && !record.ip_address && (
                           <span className="text-gray-500">No IP</span>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-gray-300 text-xs border-r border-purple-900/10">
-                        <div>👁️ Views: {record.views || 0}</div>
+                      <td className="py-4 px-5 text-gray-300 text-sm border-r border-fuchsia-900/10">
+                        <div>👁️ Views: <span className="font-bold text-fuchsia-200">{record.views || 0}</span></div>
                         <div>📅 {new Date(record.created_at).toLocaleDateString()}</div>
                         {record.last_read_at && (
                           <div>👀 {new Date(record.last_read_at).toLocaleDateString()}</div>
                         )}
                         {record.is_read && (
-                          <div className="text-green-400">✅ Read</div>
+                          <div className="text-green-400 font-bold">✅ Read</div>
                         )}
                       </td>
-                      <td className="py-4 px-4 space-y-1 rounded-r-xl">
+                      <td className="py-4 px-5 space-y-2 rounded-r-xl">
                         {record.image_url && (
                           <button
                             onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
-                            className="block w-full px-3 py-1 bg-blue-700 text-white rounded-lg shadow-blue-700/30 hover:bg-blue-800 hover:shadow-blue-500/40 transition-all text-sm"
+                            className="block w-full px-4 py-2 bg-gradient-to-tr from-blue-700 via-fuchsia-600 to-purple-700 text-white rounded-xl shadow-blue-700/30 hover:bg-blue-800 hover:shadow-fuchsia-400/40 transition-all text-base font-bold animate-glow"
                           >
                             📋 Copy Link
                           </button>
                         )}
                         <button
                           onClick={() => deleteRecord(record.id)}
-                          className="block w-full px-3 py-1 bg-red-700 text-white rounded-lg shadow-red-900/30 hover:bg-red-800 hover:shadow-red-500/40 transition-all text-sm"
+                          className="block w-full px-4 py-2 bg-gradient-to-tr from-red-700 via-fuchsia-500 to-pink-700 text-white rounded-xl shadow-red-900/30 hover:from-fuchsia-700 hover:to-red-700 hover:shadow-fuchsia-400/40 transition-all text-base font-bold animate-glow"
                         >
                           🗑️ Delete
                         </button>
@@ -491,38 +497,38 @@ export default function AdminPage() {
       {/* Модальное окно с QR кодом */}
       {showQRModal && qrCodeDataURL && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[9999] p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[9999] p-4 animate-fadein"
           onClick={forceCloseModal}
         >
           <div
-            className="relative bg-gradient-to-br from-[#1a102b]/90 via-[#2b1946]/80 to-[#181622]/95 border border-purple-600/40 shadow-2xl shadow-purple-900/60 rounded-2xl max-w-md w-full mx-4 p-8 flex flex-col items-center"
+            className="relative bg-gradient-to-br from-[#1a102b]/90 via-[#2b1946]/80 to-[#181622]/95 border border-fuchsia-500/50 shadow-2xl shadow-fuchsia-900/70 rounded-2xl max-w-md w-full mx-4 p-10 flex flex-col items-center neon-modal animate-modal-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={forceCloseModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold hover:bg-gray-800/80 rounded-full w-9 h-9 flex items-center justify-center transition-all bg-gradient-to-br from-[#232146]/80 to-[#2b183a]/90"
+              className="absolute top-4 right-4 text-fuchsia-300 hover:text-white text-2xl font-bold hover:bg-fuchsia-800/80 rounded-full w-10 h-10 flex items-center justify-center transition-all bg-gradient-to-br from-[#232146]/80 to-[#2b183a]/90 shadow-[0_0_16px_2px_rgba(236,72,153,0.3)]"
             >
               ✕
             </button>
-            <div className="flex flex-col items-center w-full mb-6">
-              <h3 className="text-2xl font-bold text-purple-200 mb-2 text-center drop-shadow-[0_1px_10px_rgba(168,85,247,0.5)]">{modalTitle}</h3>
-              <div className="w-16 h-1 bg-purple-500 mx-auto rounded"></div>
+            <div className="flex flex-col items-center w-full mb-7">
+              <h3 className="text-2xl font-black text-fuchsia-200 mb-2 text-center drop-shadow-[0_1px_16px_rgba(236,72,153,0.7)]">{modalTitle}</h3>
+              <div className="w-20 h-1 bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 mx-auto rounded-full shadow-[0_0_16px_6px_rgba(236,72,153,0.4)]"></div>
             </div>
-            <div className="flex flex-col items-center w-full mb-6">
-              <div className="bg-white/95 p-4 rounded-xl inline-block shadow-2xl shadow-purple-400/30 ring-4 ring-purple-400/40 relative">
-                <div className="absolute inset-0 pointer-events-none rounded-xl shadow-[0_0_48px_16px_rgba(168,85,247,0.23)]"></div>
+            <div className="flex flex-col items-center w-full mb-7">
+              <div className="bg-white/95 p-6 rounded-2xl inline-block shadow-2xl shadow-fuchsia-400/50 ring-4 ring-fuchsia-400/40 relative animate-glow">
+                <div className="absolute inset-0 pointer-events-none rounded-2xl shadow-[0_0_64px_18px_rgba(236,72,153,0.33)]"></div>
                 <img
                   src={qrCodeDataURL}
                   alt="QR Code"
-                  className="w-48 h-48 block drop-shadow-[0_0_24px_rgba(168,85,247,0.25)]"
+                  className="w-52 h-52 block drop-shadow-[0_0_40px_rgba(236,72,153,0.32)]"
                 />
               </div>
-              <p className="text-gray-300 mt-3 text-sm text-center">Scan with your phone camera</p>
+              <p className="text-fuchsia-300 mt-4 text-lg text-center animate-pulse">Scan with your phone camera</p>
             </div>
-            <div className="space-y-3 w-full">
+            <div className="space-y-4 w-full">
               <button
                 onClick={downloadQRCode}
-                className="w-full py-3 bg-gradient-to-r from-green-400 via-emerald-500 to-lime-400 text-black font-bold rounded-xl shadow-[0_0_16px_2px_rgba(34,197,94,0.23)] hover:from-lime-400 hover:to-green-500 hover:shadow-green-400/60 transition-all focus:outline-none focus:ring-2 focus:ring-green-300/70"
+                className="w-full py-4 bg-gradient-to-r from-green-400 via-emerald-500 to-fuchsia-400 text-black font-bold rounded-xl shadow-[0_0_24px_2px_rgba(34,197,94,0.25)] hover:from-fuchsia-400 hover:to-green-500 hover:shadow-fuchsia-400/60 transition-all focus:outline-none focus:ring-2 focus:ring-fuchsia-300/70 animate-glow"
               >
                 💾 Download QR Code
               </button>
@@ -531,19 +537,19 @@ export default function AdminPage() {
                   type="text"
                   value={generatedLink}
                   readOnly
-                  className="w-full px-4 py-3 bg-[#201c2e]/90 border border-purple-400/40 rounded-lg text-purple-200 font-mono tracking-tight focus:border-purple-400 focus:outline-none focus:shadow-[0_0_0_2px_rgba(168,85,247,0.5)] transition-all cursor-pointer text-base"
+                  className="w-full px-4 py-3 bg-[#201c2e]/90 border border-fuchsia-400/40 rounded-xl text-fuchsia-200 font-mono tracking-tight focus:border-fuchsia-400 focus:outline-none focus:shadow-[0_0_0_3px_rgba(236,72,153,0.5)] transition-all cursor-pointer text-base select-all"
                   onClick={(e) => {
                     (e.target as HTMLInputElement).select()
                     copyToClipboard(generatedLink)
                   }}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <span className="text-purple-300 text-xs">📋 Click to copy</span>
+                  <span className="text-fuchsia-300 text-xs">📋 Click to copy</span>
                 </div>
               </div>
               <button
                 onClick={forceCloseModal}
-                className="w-full py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl font-semibold shadow hover:from-gray-700 hover:to-gray-800 transition-all focus:outline-none"
+                className="w-full py-4 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl font-bold shadow hover:from-gray-700 hover:to-gray-800 transition-all focus:outline-none"
               >
                 Close
               </button>
