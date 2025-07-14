@@ -36,12 +36,12 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
       </div>
       
       {/* Контент сообщения */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex items-center justify-center">
         {error ? (
           <div className="text-white">{error}</div>
         ) : message && message.image_url ? (
-          // Если есть изображение, выводим именно его в контейнере
-          <div className="message-container">
+          // Если есть изображение, выводим только его в отдельном контейнере
+          <div className="image-wrapper">
             <Image
               src={message.image_url}
               alt={`Image for ${id}`}
@@ -109,7 +109,10 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
           40% { clip: rect(50px, 9999px, 68px, 0); transform: skew(1deg); }
           100% { clip: rect(42px, 9999px, 44px, 0); transform: skew(0.5deg); }
         }
-        .message-container {
+        .image-wrapper {
+          position: relative;
+          z-index: 20;
+          /* Центрирование и отступы можно подправить по необходимости */
           padding: 10px;
           background-color: rgba(0, 0, 0, 0.4);
           border: 2px solid #ff00ff;
