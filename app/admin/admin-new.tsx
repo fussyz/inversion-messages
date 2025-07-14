@@ -10,7 +10,9 @@ export const dynamic = 'force-dynamic'
 
 // Убедимся, что Supabase не создается с пустыми значениями
 const supabaseUrl = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL || '' : '';
-const supabaseKey = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_KEY || '' : '';
+const supabaseKey = typeof window !== 'undefined' ? 
+  process.env.NEXT_PUBLIC_SUPABASE_KEY || 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' : '';
 
 // Создаем клиент только если есть значения
 const supabase = supabaseUrl && supabaseKey ? 
@@ -110,6 +112,10 @@ export default function AdminNewPage() {
   }
 
   const handleFileUpload = async () => {
+    if (!supabase) {
+      alert('Supabase client is not initialized')
+      return
+    }
     if (!selectedFile) {
       alert('Please select a file first')
       return
@@ -197,12 +203,20 @@ export default function AdminNewPage() {
   }
 
   const handleLogout = async () => {
+    if (!supabase) {
+      alert('Supabase client is not initialized')
+      return
+    }
     await supabase.auth.signOut()
     router.push('/signin')
   }
 
   const deleteRecord = async (id: string) => {
     if (!confirm('Are you sure you want to delete this record?')) return
+    if (!supabase) {
+      alert('Supabase client is not initialized')
+      return
+    }
     try {
       const { error } = await supabase.from('messages').delete().eq('id', id)
       if (error) {
