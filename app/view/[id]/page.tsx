@@ -88,7 +88,7 @@ export default function ViewPage() {
     )
   }
 
-  // Упрощенный рендеринг - только изображение без метаданных
+  // Обновляем стиль отображения текстовых сообщений
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       <div className="max-w-4xl w-full">
@@ -101,12 +101,14 @@ export default function ViewPage() {
               onError={() => setError('Failed to load image')}
             />
           ) : message.content ? (
-            <div className="noise-container w-full max-w-2xl p-6 relative overflow-hidden">
-              {/* Текст с эффектом шума */}
-              <div className="text-pink-500 text-xl md:text-2xl font-mono relative z-10">
-                {message.content.split('\n').map((line: string, i: number) => (
-                  <p key={i} className="mb-4">{line}</p>
-                ))}
+            <div className="access-granted-container w-full max-w-2xl relative overflow-hidden rounded-lg">
+              {/* Стиль "Access Granted" с эффектами */}
+              <div className="text-center p-8">
+                <div className="text-pink-500 text-2xl md:text-3xl font-mono relative z-10 glitch-text">
+                  {message.content.split('\n').map((line: string, i: number) => (
+                    <p key={i} className="mb-4">{line}</p>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -116,24 +118,49 @@ export default function ViewPage() {
           )}
         </div>
       </div>
-
-      {/* CSS для эффекта шума */}
-      <style jsx>{`
-        .noise-container {
-          position: relative;
+      
+      {/* Стили для эффекта "Access Granted" */}
+      <style jsx global>{`
+        @keyframes noise {
+          0% { background-position: 0 0; }
+          100% { background-position: 100% 100%; }
         }
-
-        .noise-container::before {
+        
+        @keyframes textShadowFlicker {
+          0% { text-shadow: 2px 0 #ff00ff, -2px 0 cyan; }
+          25% { text-shadow: 3px 0 #ff00ff, -3px 0 cyan; }
+          50% { text-shadow: 1px 0 #ff00ff, -1px 0 cyan; }
+          75% { text-shadow: 2.5px 0 #ff00ff, -2.5px 0 cyan; }
+          100% { text-shadow: 2px 0 #ff00ff, -2px 0 cyan; }
+        }
+        
+        .access-granted-container {
+          position: relative;
+          background-color: rgba(0, 0, 0, 0.7);
+          box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+          overflow: hidden;
+        }
+        
+        .access-granted-container::before {
           content: "";
           position: absolute;
           top: 0;
           left: 0;
-          width: 100%;
-          height: 100%;
-          background-image: url('data:image/svg+xml;charset=utf-8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="a"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.5 0"/></filter><rect width="100%" height="100%" filter="url(%23a)"/></svg>');
-          opacity: 0.12;
+          right: 0;
+          bottom: 0;
+          background-image: url('data:image/svg+xml;charset=utf-8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="a"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23a)"/></svg>');
+          opacity: 0.08;
           pointer-events: none;
           z-index: 1;
+          animation: noise 8s linear infinite alternate;
+        }
+        
+        .glitch-text {
+          font-family: monospace;
+          animation: textShadowFlicker 3s infinite alternate;
+          color: #ff00ff;
+          font-weight: bold;
+          letter-spacing: 1px;
         }
       `}</style>
     </div>

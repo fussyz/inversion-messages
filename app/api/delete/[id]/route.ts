@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Обработка POST запроса для удаления сообщения
+// Обновляем обработку POST запроса для удаления
+
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Логируем все запросы для отладки
+    console.log(`Received POST delete request for message ID: ${params.id}`);
+    
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -24,8 +28,10 @@ export async function POST(
       return NextResponse.json({ error: fetchError.message }, { status: 500 })
     }
 
-    // Если сообщение имеет auto_delete = true, удаляем его
+    // Проверяем является ли сообщение помеченным для автоудаления
     if (message && message.auto_delete) {
+      console.log(`Deleting auto-delete message ${params.id}...`);
+      
       const { error: deleteError } = await supabase
         .from('messages')
         .delete()
@@ -38,6 +44,8 @@ export async function POST(
 
       console.log(`Successfully deleted message ${params.id} on tab close`)
       return NextResponse.json({ success: true })
+    } else {
+      console.log(`Message ${params.id} is not marked for auto-delete, skipping.`);
     }
 
     return NextResponse.json({ success: false, reason: 'Not set for auto-delete' })

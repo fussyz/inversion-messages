@@ -1041,7 +1041,8 @@ export default function AdminNewPage() {
                       borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none',
                       borderBottomLeftRadius: index === messages.length - 1 ? '8px' : '0'
                     }}>
-                      {record.image_url ? (
+                      {/* Меняем проверку на наличие или image_url или content */}
+                      {(record.image_url || record.content) ? (
                         <a
                           href={`/view/${record.id}`}
                           target="_blank"
@@ -1222,7 +1223,7 @@ export default function AdminNewPage() {
                       borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none',
                       borderBottomRightRadius: index === messages.length - 1 ? '8px' : '0'
                     }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', justifyContent: 'flex-start' }}>
                         {record.image_url && (
                           <>
                             <button
@@ -1232,15 +1233,13 @@ export default function AdminNewPage() {
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
-                                padding: '8px 12px',
+                                padding: '6px',
                                 cursor: 'pointer',
-                                fontWeight: '500',
-                                fontSize: '13px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: '36px', // Задаем фиксированную ширину для квадратных кнопок
-                                height: '36px', // Задаем высоту
+                                width: '32px',
+                                height: '32px',
                                 transition: 'background-color 0.2s'
                               }}
                               onMouseEnter={(e) => {
@@ -1249,9 +1248,9 @@ export default function AdminNewPage() {
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.backgroundColor = '#059669'
                               }}
-                              title="Show QR Code" // Добавляем всплывающую подсказку
+                              title="Show QR Code"
                             >
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                               </svg>
                             </button>
@@ -1262,15 +1261,13 @@ export default function AdminNewPage() {
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '6px',
-                                padding: '8px 12px',
+                                padding: '6px',
                                 cursor: 'pointer',
-                                fontWeight: '500',
-                                fontSize: '13px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: '36px',
-                                height: '36px',
+                                width: '32px',
+                                height: '32px',
                                 transition: 'background-color 0.2s'
                               }}
                               onMouseEnter={(e) => {
@@ -1279,9 +1276,9 @@ export default function AdminNewPage() {
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.backgroundColor = '#2563eb'
                               }}
-                              title="Copy Link" // Добавляем всплывающую подсказку
+                              title="Copy Link"
                             >
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                               </svg>
                             </button>
@@ -1294,15 +1291,13 @@ export default function AdminNewPage() {
                             color: 'white',
                             border: 'none',
                             borderRadius: '6px',
-                            padding: '8px 12px',
+                            padding: '6px',
                             cursor: 'pointer',
-                            fontWeight: '500',
-                            fontSize: '13px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: '36px',
-                            height: '36px',
+                            width: '32px',
+                            height: '32px',
                             transition: 'background-color 0.2s'
                           }}
                           onMouseEnter={(e) => {
@@ -1311,9 +1306,9 @@ export default function AdminNewPage() {
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = '#dc2626'
                           }}
-                          title="Delete" // Добавляем всплывающую подсказку
+                          title="Delete"
                         >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -1545,3 +1540,50 @@ export default function AdminNewPage() {
     </div>
   )
 }
+
+// Обновляем логику для удаления при закрытии вкладки
+
+// Важное изменение: убираем visibilitychange, так как он может срабатывать при сворачивании вкладки
+useEffect(() => {
+  if (!message || !message.auto_delete) return;
+  
+  // Функция для отправки запроса на удаление
+  const sendDeleteRequest = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('auto_delete', 'true');
+      
+      // Используем самый надежный способ - fetch с keepalive
+      navigator.sendBeacon(`/api/delete/${id}`, formData);
+      
+      // Дублируем запрос через fetch для современных браузеров
+      fetch(`/api/delete/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ auto_delete: true }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (error) {
+      console.error('Error sending delete request:', error);
+    }
+  };
+  
+  // Используем только beforeunload, так как visibilitychange может срабатывать не только при закрытии
+  const handleBeforeUnload = () => {
+    sendDeleteRequest();
+    // Не возвращаем значение, чтобы не показывать диалог подтверждения
+  };
+  
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    
+    // Важно: также отправляем запрос на удаление при размонтировании компонента
+    if (message.auto_delete) {
+      sendDeleteRequest();
+    }
+  };
+}, [message, id]);
