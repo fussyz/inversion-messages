@@ -394,7 +394,7 @@ export default function AdminPage() {
                       </td>
                       <td className="py-4 px-5">
                         {record.image_url ? (
-                          <div className="w-3 h-3 border border-pink-500/50 rounded overflow-hidden bg-gray-800 shadow-sm shadow-pink-500/10 group-hover:shadow-pink-500/30 transition-all duration-300">
+                          <div className="w-10 h-10 border-2 border-purple-500/40 rounded-lg overflow-hidden bg-gray-800/40 shadow-sm transition-all duration-300">
                             <img
                               src={record.image_url}
                               alt="Preview"
@@ -402,8 +402,8 @@ export default function AdminPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-3 h-3 border border-gray-600 rounded flex items-center justify-center bg-gray-800/50">
-                            <span className="text-gray-400 text-[6px]">❓</span>
+                          <div className="w-10 h-10 border border-gray-600 rounded-lg flex items-center justify-center bg-gray-800/50">
+                            <span className="text-gray-400 text-xs">❓</span>
                           </div>
                         )}
                       </td>
