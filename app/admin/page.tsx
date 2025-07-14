@@ -30,6 +30,10 @@ export default function AdminPage() {
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
   
+  // Новые состояния для изображений
+  const [images, setImages] = useState<any[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
+  
   const router = useRouter()
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function AdminPage() {
         if (session.user?.email) {
           setUser({ email: session.user.email })
           loadMessages()
+          loadImages() // Загружаем изображения при монтировании
         }
         setLoading(false)
       } catch (error) {
@@ -65,12 +70,12 @@ export default function AdminPage() {
     setLoadingMessages(true)
     try {
       const { data, error } = await supabase
-        .from('images')
+        .from('messages') // Используем таблицу messages
         .select('*')
         .order('created_at', { ascending: false })
       
       if (error) {
-        console.error('Error loading images:', error)
+        console.error('Error loading messages:', error)
       } else {
         setMessages(data || [])
       }
@@ -78,6 +83,26 @@ export default function AdminPage() {
       console.error('Error:', error)
     }
     setLoadingMessages(false)
+  }
+
+  // Новая функция для загрузки изображений
+  const loadImages = async () => {
+    setLoadingImages(true)
+    try {
+      const { data, error } = await supabase
+        .from('images')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('Error loading images:', error)
+      } else {
+        setImages(data || [])
+      }
+    } catch (error) {
+      console.error('Error:', error)
+    }
+    setLoadingImages(false)
   }
 
   const handleFileUpload = async () => {
@@ -88,17 +113,28 @@ export default function AdminPage() {
 
     setUploading(true)
     try {
+      console.log('Starting upload...')
+      console.log('File:', selectedFile.name, selectedFile.size, selectedFile.type)
+
       // Генерируем уникальное имя файла
       const fileExt = selectedFile.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
       
+      console.log('Generated filename:', fileName)
+
       // Загружаем файл в Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('images')
-        .upload(fileName, selectedFile)
+        .upload(fileName, selectedFile, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      console.log('Upload result:', { uploadData, uploadError })
 
       if (uploadError) {
-        throw uploadError
+        console.error('Upload error details:', uploadError)
+        throw new Error(`Upload failed: ${uploadError.message}`)
       }
 
       // Получаем публичную ссылку
@@ -106,29 +142,39 @@ export default function AdminPage() {
         .from('images')
         .getPublicUrl(fileName)
 
+      console.log('Public URL:', urlData.publicUrl)
+
       // Вычисляем дату истечения
       let expiresAt = null
       if (expirationDays > 0) {
         expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + expirationDays)
+        expiresAt = expiresAt.toISOString()
       }
 
       // Сохраняем информацию о файле в базе данных
+      const insertData = {
+        filename: fileName,
+        original_name: selectedFile.name,
+        url: urlData.publicUrl,
+        delete_after_view: deleteAfterView,
+        expires_at: expiresAt,
+        created_at: new Date().toISOString()
+      }
+
+      console.log('Inserting to DB:', insertData)
+
       const { data: dbData, error: dbError } = await supabase
         .from('images')
-        .insert({
-          filename: fileName,
-          original_name: selectedFile.name,
-          url: urlData.publicUrl,
-          delete_after_view: deleteAfterView,
-          expires_at: expiresAt,
-          created_at: new Date().toISOString()
-        })
+        .insert(insertData)
         .select()
         .single()
 
+      console.log('DB insert result:', { dbData, dbError })
+
       if (dbError) {
-        throw dbError
+        console.error('DB error details:', dbError)
+        throw new Error(`Database error: ${dbError.message}`)
       }
 
       // Генерируем ссылку для просмотра
@@ -146,12 +192,12 @@ export default function AdminPage() {
       setDeleteAfterView(false)
       setExpirationDays(0)
       
-      // Обновляем список
-      loadMessages()
+      // Обновляем список (но не messages, а отдельный список изображений)
+      console.log('Upload successful!')
       
-    } catch (error) {
-      console.error('Upload error:', error)
-      alert('Upload failed: ' + error.message)
+    } catch (error: any) {
+      console.error('Full upload error:', error)
+      alert(`Upload failed: ${error.message || 'Unknown error'}`)
     }
     setUploading(false)
   }
@@ -363,3 +409,26 @@ export default function AdminPage() {
     </div>
   )
 }
+
+// Выполни в Supabase SQL Editor:
+// CREATE TABLE images (
+//   id SERIAL PRIMARY KEY,
+//   filename TEXT NOT NULL,
+//   original_name TEXT NOT NULL,
+//   url TEXT NOT NULL,
+//   delete_after_view BOOLEAN DEFAULT FALSE,
+//   expires_at TIMESTAMP,
+//   viewed_at TIMESTAMP,
+//   viewer_ip TEXT,
+//   created_at TIMESTAMP DEFAULT NOW()
+// );
+
+// Проверь что bucket существует:
+// SELECT * FROM storage.buckets WHERE id = 'images';
+
+// Если bucket не существует, создай:
+// INSERT INTO storage.buckets (id, name, public) VALUES ('images', 'images', true);
+
+// Добавь политики безопасности:
+// CREATE POLICY "Allow authenticated uploads" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'images');
+// CREATE POLICY "Allow public access" ON storage.objects FOR SELECT USING (bucket_id = 'images');
