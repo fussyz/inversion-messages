@@ -9,16 +9,19 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
   const [message, setMessage] = useState<any>(null)
   const [error, setError] = useState<string>('')
 
-  // Пример загрузки сообщения (замените на реальные данные с API)
   useEffect(() => {
-    // Симуляция загрузки: если есть image_url – выводим картинку, иначе текст
+    // Для теста выберите нужный вариант:
+    // Вариант для текстового сообщения:
+    /*
     setMessage({
       id,
-      // Для теста можно задавать либо content, либо image_url.
-      // Для текстового сообщения:
-      content: "Пример текста сообщения",
-      // Для сообщения с картинкой, раскомментируйте строку ниже:
-      // image_url: '/test-image.png'
+      content: "Пример текста сообщения"
+    })
+    */
+    // Вариант для сообщения с картинкой:
+    setMessage({
+      id,
+      image_url: '/test-image.png'
     })
   }, [id])
 
