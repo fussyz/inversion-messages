@@ -15,8 +15,10 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
     setMessage({
       id,
       // Для теста можно задавать либо content, либо image_url.
-      content: "Пример текста сообщения", // если текстовое сообщение
-      // image_url: '/test-image.png' // если сообщение с картинкой
+      // Для текстового сообщения:
+      content: "Пример текста сообщения",
+      // Для сообщения с картинкой, раскомментируйте строку ниже:
+      // image_url: '/test-image.png'
     })
   }, [id])
 
@@ -35,7 +37,7 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
       {/* Контент сообщения */}
       <div className="relative z-10">
         {message && message.image_url ? (
-          // Если есть изображение, выводим его в контейнере с рамкой (стили можно доработать)
+          // Если есть изображение, выводим именно его внутри контейнера
           <div className="message-container">
             <Image
               src={message.image_url}
