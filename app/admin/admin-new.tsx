@@ -26,6 +26,10 @@ export default function AdminNewPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
   
+  // Сортировка
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [sortField, setSortField] = useState<string>('created_at')
+  
   // Image uploading states
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [deleteAfterView, setDeleteAfterView] = useState(false)
@@ -37,6 +41,7 @@ export default function AdminNewPage() {
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
   const [modalTitle, setModalTitle] = useState('')
+  const [currentImageId, setCurrentImageId] = useState('')
 
   const router = useRouter()
 
@@ -96,7 +101,7 @@ export default function AdminNewPage() {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order(sortField, { ascending: sortDirection === 'asc' })
       
       if (error) {
         console.error('Error loading messages:', error)
@@ -109,6 +114,17 @@ export default function AdminNewPage() {
       setError('Unexpected error while loading messages')
     }
     setLoadingMessages(false)
+  }
+
+  const handleSort = (field: string) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+    // После изменения сортировки обновляем данные
+    setTimeout(loadMessages, 0)
   }
 
   const handleFileUpload = async () => {
@@ -162,6 +178,7 @@ export default function AdminNewPage() {
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle('Image Uploaded Successfully!')
+      setCurrentImageId(dbData.id)
       setShowQRModal(true)
       setSelectedFile(null)
       setDeleteAfterView(false)
@@ -180,6 +197,7 @@ export default function AdminNewPage() {
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle(`QR Code for Image ${imageId}`)
+      setCurrentImageId(imageId)
       setShowQRModal(true)
     } catch (error) {
       alert('Failed to generate QR code')
@@ -189,7 +207,7 @@ export default function AdminNewPage() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      alert('Link copied to clipboard!')
+      // Убрали алерт по запросу пользователя
     } catch (error) {
       console.error('Failed to copy:', error)
     }
@@ -198,7 +216,7 @@ export default function AdminNewPage() {
   const downloadQRCode = () => {
     const link = document.createElement('a')
     link.href = qrCodeDataURL
-    link.download = 'qr-code.png'
+    link.download = `QR-код-${currentImageId}.png`
     link.click()
   }
 
@@ -235,6 +253,7 @@ export default function AdminNewPage() {
     setGeneratedLink('')
     setQRCodeDataURL('')
     setModalTitle('')
+    setCurrentImageId('')
   }
 
   useEffect(() => {
@@ -245,6 +264,15 @@ export default function AdminNewPage() {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [])
 
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString()
+    } catch (e) {
+      return dateString
+    }
+  }
+
   if (loading) {
     return (
       <div style={{
@@ -252,10 +280,20 @@ export default function AdminNewPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#111'
+        backgroundColor: '#111',
+        fontFamily: 'Arial, sans-serif'
       }}>
         <div style={{ textAlign: 'center', color: 'white' }}>
-          <h2>Loading...</h2>
+          <div style={{ 
+            width: '50px', 
+            height: '50px', 
+            borderRadius: '50%', 
+            border: '5px solid rgba(75, 85, 99, 0.2)',
+            borderTopColor: '#60a5fa',
+            margin: '0 auto',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <h2 style={{ marginTop: '20px', fontWeight: '500' }}>Loading...</h2>
         </div>
       </div>
     )
@@ -269,19 +307,27 @@ export default function AdminNewPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#111'
+        backgroundColor: '#111',
+        fontFamily: 'Arial, sans-serif'
       }}>
         <div style={{ 
           textAlign: 'center', 
           color: 'white',
           maxWidth: '600px',
-          padding: '20px',
-          background: '#222',
-          borderRadius: '10px'
+          padding: '30px',
+          background: 'linear-gradient(to bottom, #1e293b, #111827)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
         }}>
-          <h2 style={{ color: 'red', marginBottom: '20px' }}>Error</h2>
-          <p style={{ marginBottom: '20px' }}>{error}</p>
-          <p>
+          <h2 style={{ color: '#ef4444', marginBottom: '20px', fontWeight: '600' }}>Error</h2>
+          <p style={{ marginBottom: '20px', lineHeight: '1.6' }}>{error}</p>
+          <p style={{ 
+            backgroundColor: 'rgba(0,0,0,0.3)', 
+            padding: '15px', 
+            borderRadius: '8px', 
+            fontSize: '14px', 
+            lineHeight: '1.7' 
+          }}>
             <b>Environment variables:</b> <br/>
             NEXT_PUBLIC_SUPABASE_URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set'} <br/>
             NEXT_PUBLIC_SUPABASE_KEY: {process.env.NEXT_PUBLIC_SUPABASE_KEY ? 'Set' : 'Not set'}
@@ -289,13 +335,15 @@ export default function AdminNewPage() {
           <button 
             onClick={() => router.push('/signin')}
             style={{ 
-              marginTop: '20px',
-              padding: '10px 20px',
-              background: '#333',
+              marginTop: '25px',
+              padding: '12px 25px',
+              background: 'linear-gradient(to right, #4f46e5, #3b82f6)',
               border: 'none',
-              borderRadius: '5px',
+              borderRadius: '8px',
               color: 'white',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              fontWeight: '600',
+              transition: 'all 0.2s ease'
             }}
           >
             Go to Sign In
@@ -305,41 +353,60 @@ export default function AdminNewPage() {
     )
   }
 
-  // Обычный рендеринг страницы
+  // Обычный рендеринг страницы с улучшенным дизайном
   return (
     <div style={{ 
       padding: '20px', 
-      maxWidth: '1200px', 
+      maxWidth: '1300px', 
       margin: '0 auto',
-      backgroundColor: '#111',
+      backgroundColor: '#0f172a',
       color: 'white',
-      minHeight: '100vh'
+      minHeight: '100vh',
+      fontFamily: 'Arial, sans-serif'
     }}>
       <h1 style={{ 
-        fontSize: '24px', 
-        marginBottom: '20px',
-        color: 'lime',
-        backgroundColor: '#222',
-        padding: '10px'
+        fontSize: '28px', 
+        marginBottom: '25px',
+        color: 'white',
+        background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
+        padding: '16px 20px',
+        borderRadius: '12px',
+        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+        fontWeight: '700',
+        textAlign: 'center'
       }}>
-        ADMIN PANEL - SIMPLE VERSION
+        ADMIN DASHBOARD
       </h1>
 
       {/* User info */}
       {user && (
-        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#222' }}>
-          <p>Logged in as: {user.email}</p>
+        <div style={{ 
+          marginBottom: '25px', 
+          padding: '16px', 
+          background: 'linear-gradient(to bottom right, #1e293b, #111827)',
+          borderRadius: '12px',
+          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <p style={{ fontSize: '16px' }}>
+            Logged in as: <span style={{ color: '#93c5fd', fontWeight: '600' }}>{user.email}</span>
+          </p>
           <button 
             onClick={handleLogout}
             style={{ 
-              padding: '5px 10px', 
-              backgroundColor: 'red', 
+              padding: '10px 16px', 
+              backgroundColor: '#ef4444', 
               color: 'white',
               border: 'none',
-              borderRadius: '5px',
+              borderRadius: '8px',
               cursor: 'pointer',
-              marginTop: '10px'
+              fontWeight: '600',
+              transition: 'all 0.2s ease'
             }}
+            onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = '#dc2626'}
+            onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = '#ef4444'}
           >
             Sign Out
           </button>
@@ -349,14 +416,22 @@ export default function AdminNewPage() {
       {/* Upload form */}
       <div style={{ 
         marginBottom: '30px', 
-        padding: '15px', 
-        backgroundColor: '#222',
-        borderRadius: '5px' 
+        padding: '25px', 
+        background: 'linear-gradient(to bottom right, #1e293b, #111827)',
+        borderRadius: '12px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
       }}>
-        <h2 style={{ marginBottom: '15px', color: 'lime' }}>Upload Image</h2>
+        <h2 style={{ 
+          marginBottom: '20px', 
+          color: '#60a5fa',
+          fontSize: '22px',
+          fontWeight: '600',
+          borderBottom: '1px solid #374151',
+          paddingBottom: '10px'
+        }}>Upload Image</h2>
         
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Select Image</label>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Select Image</label>
           <input
             type="file"
             accept="image/*"
@@ -364,26 +439,48 @@ export default function AdminNewPage() {
             style={{ 
               display: 'block', 
               width: '100%',
-              backgroundColor: '#333',
+              backgroundColor: '#1f2937',
               color: 'white',
-              padding: '5px'
+              padding: '10px',
+              borderRadius: '8px',
+              border: '1px solid #374151'
             }}
           />
         </div>
         
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '5px' }}>
-            <input
-              type="checkbox"
-              checked={deleteAfterView}
-              onChange={(e) => setDeleteAfterView(e.target.checked)}
-            />
-            <span style={{ marginLeft: '8px' }}>Delete after opening</span>
+        <div style={{ 
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          background: '#1f2937',
+          borderRadius: '8px',
+          padding: '10px 16px'
+        }}>
+          <input
+            type="checkbox"
+            id="deleteAfterView"
+            checked={deleteAfterView}
+            onChange={(e) => setDeleteAfterView(e.target.checked)}
+            style={{
+              width: '18px',
+              height: '18px',
+              accentColor: '#60a5fa'
+            }}
+          />
+          <label 
+            htmlFor="deleteAfterView" 
+            style={{ 
+              marginLeft: '12px', 
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+          >
+            Delete after opening
           </label>
         </div>
         
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+        <div style={{ marginBottom: '25px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
             Expiration (days, 0 = no expiration)
           </label>
           <input
@@ -394,9 +491,12 @@ export default function AdminNewPage() {
             style={{ 
               display: 'block', 
               width: '100%',
-              backgroundColor: '#333',
+              backgroundColor: '#1f2937',
               color: 'white',
-              padding: '5px'
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #374151',
+              fontSize: '16px'
             }}
           />
         </div>
@@ -405,92 +505,337 @@ export default function AdminNewPage() {
           onClick={handleFileUpload}
           disabled={!selectedFile || uploading}
           style={{ 
-            backgroundColor: uploading ? '#555' : 'lime', 
-            color: 'black',
-            padding: '10px',
+            backgroundColor: uploading ? '#4b5563' : '#3b82f6', 
+            color: 'white',
+            padding: '14px',
             border: 'none',
-            borderRadius: '5px',
+            borderRadius: '8px',
             width: '100%',
-            fontWeight: 'bold',
-            cursor: uploading ? 'not-allowed' : 'pointer'
+            fontWeight: '600',
+            cursor: uploading ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 4px 6px rgba(59, 130, 246, 0.25)'
+          }}
+          onMouseEnter={e => {
+            if (!uploading) (e.target as HTMLElement).style.backgroundColor = '#2563eb'
+          }}
+          onMouseLeave={e => {
+            if (!uploading) (e.target as HTMLElement).style.backgroundColor = '#3b82f6'
           }}
         >
-          {uploading ? 'Uploading...' : 'Upload Image'}
+          {uploading ? (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ 
+                width: '20px', 
+                height: '20px', 
+                borderRadius: '50%', 
+                border: '3px solid rgba(255, 255, 255, 0.3)',
+                borderTopColor: 'white',
+                marginRight: '10px',
+                animation: 'spin 1s linear infinite'
+              }}></span>
+              Uploading...
+            </span>
+          ) : 'Upload Image'}
         </button>
       </div>
 
       {/* Records Table */}
       <div style={{ 
-        backgroundColor: '#222',
-        padding: '15px',
-        borderRadius: '5px'
+        background: 'linear-gradient(to bottom right, #1e293b, #111827)',
+        padding: '25px',
+        borderRadius: '12px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <h2 style={{ color: 'lime', margin: 0 }}>
-            Records ({messages.length})
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '15px'
+        }}>
+          <h2 style={{ color: '#60a5fa', fontWeight: '600', fontSize: '22px', margin: 0 }}>
+            Records <span style={{ 
+              backgroundColor: '#374151', 
+              padding: '4px 10px', 
+              borderRadius: '999px', 
+              fontSize: '16px', 
+              marginLeft: '8px'
+            }}>
+              {messages.length}
+            </span>
           </h2>
           <button
             onClick={loadMessages}
             disabled={loadingMessages}
             style={{
-              backgroundColor: loadingMessages ? '#555' : 'blue',
+              backgroundColor: loadingMessages ? '#4b5563' : '#3b82f6',
               color: 'white',
-              padding: '5px 10px',
+              padding: '10px 16px',
               border: 'none',
-              borderRadius: '5px',
-              cursor: loadingMessages ? 'not-allowed' : 'pointer'
+              borderRadius: '8px',
+              cursor: loadingMessages ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={e => {
+              if (!loadingMessages) (e.target as HTMLElement).style.backgroundColor = '#2563eb'
+            }}
+            onMouseLeave={e => {
+              if (!loadingMessages) (e.target as HTMLElement).style.backgroundColor = '#3b82f6'
             }}
           >
-            {loadingMessages ? 'Loading...' : 'Refresh'}
+            {loadingMessages ? (
+              <>
+                <span style={{ 
+                  width: '16px', 
+                  height: '16px', 
+                  borderRadius: '50%', 
+                  border: '3px solid rgba(255, 255, 255, 0.3)',
+                  borderTopColor: 'white',
+                  animation: 'spin 1s linear infinite'
+                }}></span>
+                Loading...
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </>
+            )}
           </button>
         </div>
 
         {loadingMessages ? (
-          <p>Loading...</p>
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ 
+              width: '40px', 
+              height: '40px', 
+              borderRadius: '50%', 
+              border: '4px solid rgba(75, 85, 99, 0.2)',
+              borderTopColor: '#60a5fa',
+              margin: '0 auto',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            <p style={{ marginTop: '16px', color: '#9ca3af', fontSize: '16px' }}>Loading records...</p>
+          </div>
         ) : messages.length === 0 ? (
-          <p>No records yet.</p>
+          <div style={{ 
+            padding: '40px 0', 
+            textAlign: 'center',
+            backgroundColor: '#1f2937',
+            borderRadius: '8px'
+          }}>
+            <svg width="50" height="50" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" style={{ margin: '0 auto' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p style={{ color: '#9ca3af', fontSize: '18px', marginTop: '16px' }}>No records found</p>
+          </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
+            <style dangerouslySetInnerHTML={{
+              __html: `
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+                .table-header:hover {
+                  background-color: rgba(55, 65, 81, 0.7);
+                }
+                .sort-indicator {
+                  margin-left: 4px;
+                  display: inline-block;
+                  transition: transform 0.2s;
+                }
+              `
+            }} />
             <table style={{ 
               width: '100%', 
-              borderCollapse: 'collapse',
-              backgroundColor: '#333'
+              borderCollapse: 'separate',
+              borderSpacing: '0',
+              fontSize: '14px'
             }}>
               <thead>
                 <tr>
+                  <th 
+                    className="table-header"
+                    onClick={() => handleSort('id')}
+                    style={{ 
+                      padding: '12px', 
+                      textAlign: 'left', 
+                      backgroundColor: '#1f2937',
+                      color: '#d1d5db',
+                      fontWeight: '600',
+                      borderBottom: '2px solid #374151',
+                      borderTop: '1px solid #374151',
+                      borderLeft: '1px solid #374151',
+                      borderTopLeftRadius: '8px',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                  >
+                    ID
+                    {sortField === 'id' && (
+                      <span className="sort-indicator" style={{
+                        transform: sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }}>▼</span>
+                    )}
+                  </th>
                   <th style={{ 
-                    padding: '8px', 
+                    padding: '12px', 
                     textAlign: 'left', 
-                    borderBottom: '2px solid #444'
-                  }}>ID</th>
-                  <th style={{ 
-                    padding: '8px', 
-                    textAlign: 'left', 
-                    borderBottom: '2px solid #444'
+                    backgroundColor: '#1f2937',
+                    color: '#d1d5db',
+                    fontWeight: '600',
+                    borderBottom: '2px solid #374151',
+                    borderTop: '1px solid #374151',
+                    cursor: 'default'
                   }}>Preview</th>
                   <th style={{ 
-                    padding: '8px', 
+                    padding: '12px', 
                     textAlign: 'left', 
-                    borderBottom: '2px solid #444'
+                    backgroundColor: '#1f2937',
+                    color: '#d1d5db',
+                    fontWeight: '600',
+                    borderBottom: '2px solid #374151',
+                    borderTop: '1px solid #374151',
+                    cursor: 'default'
                   }}>Settings</th>
+                  <th 
+                    className="table-header"
+                    onClick={() => handleSort('ip_address')}
+                    style={{ 
+                      padding: '12px', 
+                      textAlign: 'left', 
+                      backgroundColor: '#1f2937',
+                      color: '#d1d5db',
+                      fontWeight: '600',
+                      borderBottom: '2px solid #374151',
+                      borderTop: '1px solid #374151',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                  >
+                    IP Address
+                    {sortField === 'ip_address' && (
+                      <span className="sort-indicator" style={{
+                        transform: sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }}>▼</span>
+                    )}
+                  </th>
+                  <th 
+                    className="table-header"
+                    onClick={() => handleSort('created_at')}
+                    style={{ 
+                      padding: '12px', 
+                      textAlign: 'left', 
+                      backgroundColor: '#1f2937',
+                      color: '#d1d5db',
+                      fontWeight: '600',
+                      borderBottom: '2px solid #374151',
+                      borderTop: '1px solid #374151',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                  >
+                    Date
+                    {sortField === 'created_at' && (
+                      <span className="sort-indicator" style={{
+                        transform: sortDirection === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }}>▼</span>
+                    )}
+                  </th>
                   <th style={{ 
-                    padding: '8px', 
+                    padding: '12px', 
                     textAlign: 'left', 
-                    borderBottom: '2px solid #444'
+                    backgroundColor: '#1f2937',
+                    color: '#d1d5db',
+                    fontWeight: '600',
+                    borderBottom: '2px solid #374151',
+                    borderTop: '1px solid #374151',
+                    cursor: 'default'
+                  }}>Stats</th>
+                  <th style={{ 
+                    padding: '12px', 
+                    textAlign: 'left', 
+                    backgroundColor: '#1f2937',
+                    color: '#d1d5db',
+                    fontWeight: '600',
+                    borderBottom: '2px solid #374151',
+                    borderTop: '1px solid #374151',
+                    borderRight: '1px solid #374151',
+                    borderTopRightRadius: '8px',
+                    cursor: 'default'
                   }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {messages.map((record) => (
-                  <tr key={record.id} style={{ borderBottom: '1px solid #444' }}>
-                    <td style={{ padding: '8px' }}>{record.id}</td>
-                    <td style={{ padding: '8px' }}>
+                {messages.map((record, index) => (
+                  <tr 
+                    key={record.id} 
+                    style={{ 
+                      backgroundColor: index % 2 === 0 ? '#111827' : '#1f2937',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#374151'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#111827' : '#1f2937'
+                    }}
+                  >
+                    <td style={{ 
+                      padding: '12px',
+                      borderLeft: '1px solid #374151',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none',
+                      borderBottomLeftRadius: index === messages.length - 1 ? '8px' : '0'
+                    }}>
+                      {record.image_url ? (
+                        <a
+                          href={`/view/${record.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: '#60a5fa',
+                            textDecoration: 'none',
+                            fontFamily: 'monospace',
+                            fontWeight: '600',
+                            fontSize: '14px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.textDecoration = 'underline'
+                            e.currentTarget.style.color = '#93c5fd'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.textDecoration = 'none'
+                            e.currentTarget.style.color = '#60a5fa'
+                          }}
+                        >
+                          {record.id}
+                        </a>
+                      ) : (
+                        <span style={{ fontFamily: 'monospace', fontWeight: '500' }}>{record.id}</span>
+                      )}
+                    </td>
+                    <td style={{ 
+                      padding: '12px',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none'
+                    }}>
                       {record.image_url ? (
                         <div style={{ 
-                          width: '24px', 
-                          height: '24px', 
-                          border: '1px solid white',
-                          overflow: 'hidden'
+                          width: '32px', 
+                          height: '32px', 
+                          border: '2px solid #60a5fa',
+                          borderRadius: '4px',
+                          overflow: 'hidden',
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.5)'
                         }}>
                           <img
                             src={record.image_url}
@@ -499,88 +844,233 @@ export default function AdminNewPage() {
                               width: '100%',
                               height: '100%',
                               objectFit: 'cover',
-                              maxWidth: '100%',
-                              maxHeight: '100%'
                             }}
                           />
                         </div>
                       ) : (
                         <div style={{ 
-                          width: '24px', 
-                          height: '24px', 
-                          border: '1px solid gray',
+                          width: '32px', 
+                          height: '32px', 
+                          border: '1px solid #4b5563',
+                          borderRadius: '4px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          backgroundColor: '#444'
+                          backgroundColor: '#374151'
                         }}>?</div>
                       )}
                     </td>
-                    <td style={{ padding: '8px' }}>
-                      {record.auto_delete && (
-                        <div style={{ color: 'red', marginBottom: '5px' }}>
-                          Delete after view
-                        </div>
-                      )}
-                      {record.expire_at && (
-                        <div style={{ color: 'yellow', marginBottom: '5px' }}>
-                          Expires: {new Date(record.expire_at).toLocaleDateString()}
-                        </div>
-                      )}
-                      {record.days_to_live && (
-                        <div style={{ marginBottom: '5px' }}>
-                          Days: {record.days_to_live}
-                        </div>
-                      )}
-                      {!record.auto_delete && !record.expire_at && (
-                        <div style={{ color: 'lime' }}>Permanent</div>
+                    <td style={{ 
+                      padding: '12px',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {record.auto_delete && (
+                          <div style={{ 
+                            color: '#f87171', 
+                            backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '13px',
+                            display: 'inline-block'
+                          }}>
+                            Delete after view
+                          </div>
+                        )}
+                        {record.expire_at && (
+                          <div style={{ 
+                            color: '#fbbf24', 
+                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '13px',
+                            display: 'inline-block'
+                          }}>
+                            Expires: {formatDate(record.expire_at)}
+                          </div>
+                        )}
+                        {record.days_to_live && (
+                          <div style={{ 
+                            color: '#a78bfa', 
+                            backgroundColor: 'rgba(167, 139, 250, 0.1)',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '13px',
+                            display: 'inline-block'
+                          }}>
+                            Days: {record.days_to_live}
+                          </div>
+                        )}
+                        {!record.auto_delete && !record.expire_at && (
+                          <div style={{ 
+                            color: '#34d399', 
+                            backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '13px',
+                            display: 'inline-block'
+                          }}>
+                            Permanent
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ 
+                      padding: '12px',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none',
+                      fontFamily: 'monospace',
+                      fontSize: '13px'
+                    }}>
+                      {record.client_ip || record.ip_address || (
+                        <span style={{ color: '#9ca3af' }}>No IP</span>
                       )}
                     </td>
-                    <td style={{ padding: '8px' }}>
-                      {record.image_url && (
-                        <div style={{ marginBottom: '5px' }}>
-                          <button
-                            onClick={() => showQRForImage(record.id)}
-                            style={{
-                              backgroundColor: 'green',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '5px 10px',
-                              marginRight: '5px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Show QR
-                          </button>
-                          <button
-                            onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
-                            style={{
-                              backgroundColor: 'blue',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '5px 10px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Copy Link
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => deleteRecord(record.id)}
-                        style={{
-                          backgroundColor: 'red',
-                          color: 'white',
-                          border: 'none',
+                    <td style={{ 
+                      padding: '12px',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none'
+                    }}>
+                      {formatDate(record.created_at)}
+                    </td>
+                    <td style={{ 
+                      padding: '12px',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ 
+                          color: '#60a5fa', 
+                          backgroundColor: 'rgba(96, 165, 250, 0.1)',
                           borderRadius: '4px',
-                          padding: '5px 10px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Delete
-                      </button>
+                          padding: '3px 8px',
+                          fontSize: '13px',
+                          display: 'inline-block'
+                        }}>
+                          Views: {record.views || 0}
+                        </div>
+                        {record.is_read && (
+                          <div style={{ 
+                            color: '#34d399', 
+                            backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '13px',
+                            display: 'inline-block'
+                          }}>
+                            Read
+                          </div>
+                        )}
+                        {record.last_read_at && (
+                          <div style={{ 
+                            color: '#a78bfa', 
+                            backgroundColor: 'rgba(167, 139, 250, 0.1)',
+                            borderRadius: '4px',
+                            padding: '3px 8px',
+                            fontSize: '13px',
+                            display: 'inline-block'
+                          }}>
+                            Last read: {formatDate(record.last_read_at)}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ 
+                      padding: '12px',
+                      borderRight: '1px solid #374151',
+                      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none',
+                      borderBottomRightRadius: index === messages.length - 1 ? '8px' : '0'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {record.image_url && (
+                          <>
+                            <button
+                              onClick={() => showQRForImage(record.id)}
+                              style={{
+                                backgroundColor: '#059669',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                                fontSize: '13px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#047857'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#059669'
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                              </svg>
+                              Show QR
+                            </button>
+                            <button
+                              onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
+                              style={{
+                                backgroundColor: '#2563eb',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                                fontSize: '13px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'background-color 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#1d4ed8'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#2563eb'
+                              }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                              </svg>
+                              Copy Link
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => deleteRecord(record.id)}
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            fontWeight: '500',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#b91c1c'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#dc2626'
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -599,132 +1089,210 @@ export default function AdminNewPage() {
           right: 0,
           bottom: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(5px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1000,
+          animation: 'fadeIn 0.2s ease-out'
         }} onClick={forceCloseModal}>
           <div 
             style={{
-              backgroundColor: '#222',
-              padding: '20px',
-              borderRadius: '10px',
+              backgroundColor: '#1f2937',
+              borderRadius: '16px',
               maxWidth: '400px',
-              width: '100%',
-              position: 'relative'
+              width: '90%',
+              position: 'relative',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden',
+              animation: 'scaleIn 0.3s ease-out',
+              border: '1px solid #374151'
             }}
             onClick={e => e.stopPropagation()}
           >
-            <button 
-              onClick={forceCloseModal}
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: 'white',
-                fontSize: '18px',
-                cursor: 'pointer'
-              }}
-            >
-              ✕
-            </button>
-            
-            <h3 style={{ 
-              color: 'lime', 
-              textAlign: 'center',
-              marginBottom: '15px',
-              fontSize: '18px'
-            }}>
-              {modalTitle}
-            </h3>
-            
+            {/* Header with gradient background */}
             <div style={{
-              backgroundColor: 'white',
-              padding: '10px',
-              marginBottom: '15px',
-              textAlign: 'center',
-              borderRadius: '5px'
+              background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
+              padding: '20px',
+              position: 'relative'
             }}>
-              <img 
-                src={qrCodeDataURL}
-                alt="QR Code"
+              <button 
+                onClick={forceCloseModal}
                 style={{
-                  width: '200px',
-                  height: '200px',
-                  maxWidth: '100%'
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  border: 'none',
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  color: 'white',
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s'
                 }}
-              />
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                ✕
+              </button>
+              <h3 style={{ 
+                color: 'white', 
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '600'
+              }}>
+                {modalTitle}
+              </h3>
             </div>
             
-            <button
-              onClick={downloadQRCode}
-              style={{
-                width: '100%',
-                padding: '10px',
-                backgroundColor: 'green',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                marginBottom: '10px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              Download QR Code
-            </button>
-            
-            <div style={{ position: 'relative', marginBottom: '10px' }}>
-              <input
-                type="text"
-                value={generatedLink}
-                readOnly
+            {/* QR code container */}
+            <div style={{ padding: '24px' }}>
+              <div style={{
+                backgroundColor: 'white',
+                padding: '20px',
+                marginBottom: '20px',
+                borderRadius: '12px',
+                display: 'flex',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+              }}>
+                <img 
+                  src={qrCodeDataURL}
+                  alt="QR Code"
+                  style={{
+                    width: '200px',
+                    height: '200px',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <button
+                  onClick={downloadQRCode}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#059669',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '15px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.backgroundColor = '#047857'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = '#059669'
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download QR Code
+                </button>
+              </div>
+              
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={generatedLink}
+                  readOnly
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    paddingRight: '110px',
+                    backgroundColor: '#111827',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontFamily: 'monospace'
+                  }}
+                  onClick={(e) => {
+                    (e.target as HTMLInputElement).select();
+                    copyToClipboard(generatedLink);
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  color: '#60a5fa',
+                  fontSize: '12px',
+                  pointerEvents: 'none'
+                }}>
+                  Click to copy
+                </div>
+              </div>
+              
+              <button
+                onClick={forceCloseModal}
                 style={{
                   width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#333',
-                  border: '1px solid #555',
-                  borderRadius: '5px',
+                  padding: '12px',
+                  backgroundColor: '#4b5563',
                   color: 'white',
-                  cursor: 'pointer'
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '15px',
+                  marginTop: '16px',
+                  transition: 'all 0.2s'
                 }}
-                onClick={(e) => {
-                  (e.target as HTMLInputElement).select();
-                  copyToClipboard(generatedLink);
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = '#374151'
                 }}
-              />
-              <div style={{
-                position: 'absolute',
-                right: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'gray',
-                fontSize: '12px',
-                pointerEvents: 'none'
-              }}>
-                Click to copy
-              </div>
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = '#4b5563'
+                }}
+              >
+                Close
+              </button>
             </div>
-            
-            <button
-              onClick={forceCloseModal}
-              style={{
-                width: '100%',
-                padding: '10px',
-                backgroundColor: '#444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `
+      }} />
     </div>
   )
 }
