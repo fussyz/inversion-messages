@@ -88,21 +88,29 @@ export default function ViewPage() {
     )
   }
 
-  // Обновляем стиль отображения текстовых сообщений
+  // Обновите компонент для добавления noise эффекта под изображениями
+
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative">
+      {/* Добавляем шумовой фон на всю страницу */}
+      <div className="noise-background absolute top-0 left-0 w-full h-full"></div>
+
+      <div className="max-w-4xl w-full relative z-10">
         <div className="flex justify-center">
           {message.image_url ? (
-            <img
-              src={message.image_url}
-              alt="Message content"
-              className="max-w-full max-h-[90vh] object-contain"
-              onError={() => setError('Failed to load image')}
-            />
+            <div className="image-container relative">
+              {/* Создаем дополнительный шумовой эффект вокруг изображения */}
+              <div className="image-noise-border"></div>
+              
+              <img
+                src={message.image_url}
+                alt="Message content"
+                className="max-w-full max-h-[90vh] object-contain relative z-10"
+                onError={() => setError('Failed to load image')}
+              />
+            </div>
           ) : message.content ? (
             <div className="access-granted-container w-full max-w-2xl relative overflow-hidden rounded-lg">
-              {/* Стиль "Access Granted" с эффектами */}
               <div className="text-center p-8">
                 <div className="text-pink-500 text-2xl md:text-3xl font-mono relative z-10 glitch-text">
                   {message.content.split('\n').map((line: string, i: number) => (
@@ -119,7 +127,7 @@ export default function ViewPage() {
         </div>
       </div>
       
-      {/* Стили для эффекта "Access Granted" */}
+      {/* CSS для шумовых эффектов */}
       <style jsx global>{`
         @keyframes noise {
           0% { background-position: 0 0; }
@@ -132,6 +140,41 @@ export default function ViewPage() {
           50% { text-shadow: 1px 0 #ff00ff, -1px 0 cyan; }
           75% { text-shadow: 2.5px 0 #ff00ff, -2.5px 0 cyan; }
           100% { text-shadow: 2px 0 #ff00ff, -2px 0 cyan; }
+        }
+
+        @keyframes noiseAnimation {
+          0% { opacity: 0.3; }
+          50% { opacity: 0.5; }
+          100% { opacity: 0.3; }
+        }
+        
+        .noise-background {
+          background-image: url('/noise.gif');
+          background-repeat: repeat;
+          animation: noise 0.2s infinite alternate, noiseAnimation 3s infinite;
+          opacity: 0.4;
+          pointer-events: none;
+        }
+        
+        .image-container {
+          position: relative;
+          display: inline-block;
+          box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+        }
+        
+        .image-noise-border {
+          position: absolute;
+          top: -10px;
+          left: -10px;
+          right: -10px;
+          bottom: -10px;
+          background-image: url('/noise.gif');
+          background-repeat: repeat;
+          z-index: 5;
+          pointer-events: none;
+          opacity: 0.5;
+          border-radius: 10px;
+          filter: blur(5px);
         }
         
         .access-granted-container {
@@ -148,7 +191,7 @@ export default function ViewPage() {
           left: 0;
           right: 0;
           bottom: 0;
-          background-image: url('data:image/svg+xml;charset=utf-8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="a"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23a)"/></svg>');
+          background-image: url('/noise.gif');
           opacity: 0.08;
           pointer-events: none;
           z-index: 1;

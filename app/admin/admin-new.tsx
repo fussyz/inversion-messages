@@ -372,7 +372,7 @@ export default function AdminNewPage() {
   }
 
   const deleteRecord = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this record?')) return
+    // Убрали подтверждение
     if (!supabase) {
       alert('Supabase client is not initialized')
       return
@@ -382,7 +382,7 @@ export default function AdminNewPage() {
       if (error) {
         alert('Failed to delete record')
       } else {
-        alert('Record deleted successfully')
+        // Убрали сообщение об успехе, просто обновляем список
         loadMessages()
       }
     } catch (error) {
