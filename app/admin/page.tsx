@@ -241,11 +241,13 @@ export default function AdminPage() {
         )}
 
         {/* Image Upload Panel */}
-        <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 mb-12 shadow-lg">
+        <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 shadow-lg mb-12">
           <h2 className="text-3xl font-semibold text-purple-300 mb-6">Upload Image</h2>
           <div className="space-y-6">
             <div>
-              <label className="block text-base font-bold text-gray-300 mb-2">Select Image</label>
+              <label className="block text-base font-bold text-gray-300 mb-2">
+                Select Image
+              </label>
               <input
                 type="file"
                 accept="image/*"
@@ -341,7 +343,7 @@ export default function AdminPage() {
                       </td>
                       <td className="py-4 px-5">
                         {record.image_url ? (
-                          <div className="w-10 h-10 border border-purple-500 rounded overflow-hidden bg-gray-800">
+                          <div className="w-8 h-8 border border-purple-500 rounded overflow-hidden bg-gray-800">
                             <img
                               src={record.image_url}
                               alt="Preview"
@@ -349,7 +351,7 @@ export default function AdminPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-10 h-10 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
+                          <div className="w-8 h-8 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
                             <span className="text-purple-400 text-xs">❓</span>
                           </div>
                         )}
@@ -374,9 +376,9 @@ export default function AdminPage() {
                         {record.image_url && (
                           <button
                             onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              showQRForImage(record.id)
+                              e.preventDefault();
+                              e.stopPropagation();
+                              showQRForImage(record.id);
                             }}
                             className="px-4 py-2 bg-gradient-to-r from-green-400 via-emerald-500 to-fuchsia-500 text-white rounded shadow transition-all text-sm font-bold"
                           >
@@ -406,7 +408,9 @@ export default function AdminPage() {
                       <td className="py-4 px-5 space-y-3">
                         {record.image_url && (
                           <button
-                            onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
+                            onClick={() =>
+                              copyToClipboard(`${window.location.origin}/view/${record.id}`)
+                            }
                             className="w-full px-4 py-2 bg-gradient-to-tr from-blue-700 via-fuchsia-600 to-purple-700 text-white rounded shadow transition-all text-sm font-bold"
                           >
                             📋 Copy Link
@@ -472,8 +476,8 @@ export default function AdminPage() {
                   readOnly
                   className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none cursor-pointer text-sm"
                   onClick={(e) => {
-                    (e.target as HTMLInputElement).select()
-                    copyToClipboard(generatedLink)
+                    (e.target as HTMLInputElement).select();
+                    copyToClipboard(generatedLink);
                   }}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
