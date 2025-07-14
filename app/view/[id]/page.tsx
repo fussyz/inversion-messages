@@ -1,17 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { useParams } from 'next/navigation'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-export default function ViewImagePage() {
+export default function ViewPage() {
   const [loading, setLoading] = useState(true)
-  const [image, setImage] = useState<any>(null)
+  const [message, setMessage] = useState<any>(null)
   const [error, setError] = useState('')
   const [countdown, setCountdown] = useState<number | null>(null)
   const params = useParams()
@@ -19,7 +13,7 @@ export default function ViewImagePage() {
 
   useEffect(() => {
     if (id) {
-      loadImage()
+      loadMessage()
     }
   }, [id])
 
@@ -29,7 +23,7 @@ export default function ViewImagePage() {
       interval = setInterval(() => {
         setCountdown(prev => {
           if (prev && prev <= 1) {
-            deleteImage()
+            deleteMessage()
             return 0
           }
           return prev ? prev - 1 : 0
@@ -39,81 +33,60 @@ export default function ViewImagePage() {
     return () => clearInterval(interval)
   }, [countdown])
 
-  const loadImage = async () => {
+  const loadMessage = async () => {
     try {
-      // Получаем IP адрес пользователя
-      const response = await fetch('/api/get-ip')
-      const { ip } = await response.json()
+      const response = await fetch(`/api/read/${id}`)
+      const data = await response.json()
 
-      // Загружаем информацию об изображении
-      const { data: imageData, error: fetchError } = await supabase
-        .from('images')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (fetchError || !imageData) {
-        setError('Image not found')
+      if (!response.ok) {
+        setError(data.error || 'Message not found')
         setLoading(false)
         return
       }
 
       // Проверяем не истек ли срок действия
-      if (imageData.expires_at && new Date(imageData.expires_at) < new Date()) {
-        setError('Image has expired')
+      if (data.expire_at && new Date(data.expire_at) < new Date()) {
+        setError('Message has expired')
         setLoading(false)
         return
       }
 
       // Проверяем не было ли уже просмотрено (если включено удаление после просмотра)
-      if (imageData.viewed_at && imageData.delete_after_view) {
-        setError('Image has already been viewed and deleted')
+      if (data.last_read_at && data.auto_delete && data.is_read) {
+        setError('Message has already been viewed and will be deleted')
         setLoading(false)
         return
       }
 
-      setImage(imageData)
-
-      // Обновляем информацию о просмотре
-      await supabase
-        .from('images')
-        .update({
-          viewed_at: new Date().toISOString(),
-          viewer_ip: ip
-        })
-        .eq('id', id)
+      setMessage(data)
 
       // Если включено удаление после просмотра, запускаем обратный отсчет
-      if (imageData.delete_after_view) {
+      if (data.auto_delete && !data.is_read) {
         setCountdown(10) // 10 секунд на просмотр
       }
 
       setLoading(false)
     } catch (error) {
-      console.error('Error loading image:', error)
-      setError('Failed to load image')
+      console.error('Error loading message:', error)
+      setError('Failed to load message')
       setLoading(false)
     }
   }
 
-  const deleteImage = async () => {
-    if (!image) return
+  const deleteMessage = async () => {
+    if (!message) return
 
     try {
-      // Удаляем файл из storage
-      await supabase.storage
-        .from('images')
-        .remove([image.filename])
-
       // Удаляем запись из базы данных
-      await supabase
-        .from('images')
-        .delete()
-        .eq('id', image.id)
+      const response = await fetch(`/api/delete/${message.id}`, {
+        method: 'DELETE'
+      })
 
-      setError('Image has been deleted after viewing')
+      if (response.ok) {
+        setError('Message has been deleted after viewing')
+      }
     } catch (error) {
-      console.error('Error deleting image:', error)
+      console.error('Error deleting message:', error)
     }
   }
 
@@ -128,7 +101,7 @@ export default function ViewImagePage() {
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500"></div>
-          <p className="mt-4 text-purple-500">Loading image...</p>
+          <p className="mt-4 text-purple-500">Loading...</p>
         </div>
       </div>
     )
@@ -149,7 +122,7 @@ export default function ViewImagePage() {
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       {countdown !== null && countdown > 0 && (
         <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
-          <p className="font-bold">This image will be deleted in:</p>
+          <p className="font-bold">This message will be deleted in:</p>
           <p className="text-2xl text-center">{formatTime(countdown)}</p>
         </div>
       )}
@@ -157,25 +130,40 @@ export default function ViewImagePage() {
       <div className="max-w-4xl w-full">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-purple-500 mb-2">
-            {image.original_name}
+            Message #{message.id}
           </h1>
-          {image.delete_after_view && (
-            <p className="text-red-400">⚠️ This image will be deleted after viewing</p>
+          {message.auto_delete && (
+            <p className="text-red-400">⚠️ This message will be deleted after viewing</p>
           )}
-          {image.expires_at && (
+          {message.expire_at && (
             <p className="text-yellow-400">
-              Expires: {new Date(image.expires_at).toLocaleString()}
+              Expires: {new Date(message.expire_at).toLocaleString()}
             </p>
           )}
         </div>
 
         <div className="flex justify-center">
-          <img
-            src={image.url}
-            alt={image.original_name}
-            className="max-w-full max-h-[80vh] object-contain rounded-lg border border-purple-500"
-            onError={() => setError('Failed to load image')}
-          />
+          {message.image_url ? (
+            <img
+              src={message.image_url}
+              alt="Message content"
+              className="max-w-full max-h-[80vh] object-contain rounded-lg border border-purple-500"
+              onError={() => setError('Failed to load image')}
+            />
+          ) : message.content ? (
+            <div className="bg-gray-900 p-8 rounded-lg border border-purple-500 max-w-2xl">
+              <p className="text-white text-lg leading-relaxed">{message.content}</p>
+            </div>
+          ) : (
+            <div className="bg-gray-900 p-8 rounded-lg border border-purple-500">
+              <p className="text-gray-400">No content available</p>
+            </div>
+          )}
+        </div>
+
+        <div className="text-center mt-6 text-gray-400">
+          <p>Views: {message.views || 0}</p>
+          <p>Created: {new Date(message.created_at).toLocaleString()}</p>
         </div>
       </div>
     </div>

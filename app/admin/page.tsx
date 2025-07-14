@@ -26,7 +26,7 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false)
   
   // Состояния для модального окна с QR кодом
-  const [showQRModal, setShowQRModal] = useState(false) // Убедись что false
+  const [showQRModal, setShowQRModal] = useState(false)
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
   const [modalTitle, setModalTitle] = useState('')
@@ -143,7 +143,6 @@ export default function AdminPage() {
         days_to_live: expirationDays > 0 ? expirationDays : null,
         views: 0,
         is_read: false
-        // Убираем created_at - пусть база сама ставит
       }
 
       console.log('=== INSERTING TO DATABASE ===')
@@ -192,13 +191,25 @@ export default function AdminPage() {
   }
 
   const showQRForImage = async (imageId: number) => {
-    const viewLink = `${window.location.origin}/view/${imageId}`
-    const qrDataURL = await QRCode.toDataURL(viewLink)
-    
-    setGeneratedLink(viewLink)
-    setQRCodeDataURL(qrDataURL)
-    setModalTitle('QR Code for Image')
-    setShowQRModal(true)
+    try {
+      const viewLink = `${window.location.origin}/view/${imageId}`
+      const qrDataURL = await QRCode.toDataURL(viewLink, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      })
+      
+      setGeneratedLink(viewLink)
+      setQRCodeDataURL(qrDataURL)
+      setModalTitle(`QR Code for Image #${imageId}`)
+      setShowQRModal(true)
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+      alert('Failed to generate QR code')
+    }
   }
 
   const copyToClipboard = async (text: string) => {
@@ -222,8 +233,6 @@ export default function AdminPage() {
     router.push('/signin')
   }
 
-  // ДОБАВЬ функция удаления после copyToClipboard:
-
   const deleteRecord = async (id: number) => {
     if (!confirm('Are you sure you want to delete this record?')) {
       return
@@ -240,15 +249,13 @@ export default function AdminPage() {
         alert('Failed to delete record')
       } else {
         alert('Record deleted successfully')
-        loadMessages() // Обновляем список
+        loadMessages()
       }
     } catch (error) {
       console.error('Delete error:', error)
       alert('Failed to delete record')
     }
   }
-
-  // ДОБАВЬ также функцию для принудительного закрытия модала:
 
   const forceCloseModal = () => {
     setShowQRModal(false)
@@ -257,7 +264,6 @@ export default function AdminPage() {
     setModalTitle('')
   }
 
-  // И добавь escape key listener
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -352,7 +358,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Единая таблица для всех записей из messages */}
+        {/* Таблица записей */}
         <div className="bg-gray-900 p-6 rounded-lg border border-purple-500">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold">All Records ({messages.length})</h2>
@@ -390,7 +396,6 @@ export default function AdminPage() {
                 <tbody>
                   {messages.map((record) => (
                     <tr key={record.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
-                      {/* ID - гиперссылка */}
                       <td className="py-3 px-4 text-purple-200">
                         {record.image_url ? (
                           <a 
@@ -406,29 +411,27 @@ export default function AdminPage() {
                         )}
                       </td>
                       
-                      {/* Preview - превью картинки */}
                       <td className="py-3 px-4">
                         {record.image_url ? (
-                          <div className="w-16 h-16 border border-purple-500 rounded overflow-hidden">
+                          <div className="w-12 h-12 border border-purple-500 rounded overflow-hidden bg-gray-800">
                             <img 
                               src={record.image_url} 
                               alt="Preview" 
-                              className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform"
-                              onClick={() => window.open(record.image_url, '_blank')}
+                              className="w-full h-full object-cover"
+                              style={{ maxWidth: '48px', maxHeight: '48px' }}
                             />
                           </div>
                         ) : record.content ? (
-                          <div className="w-16 h-16 border border-purple-500 rounded flex items-center justify-center bg-gray-800">
-                            <span className="text-blue-400 text-2xl">💬</span>
+                          <div className="w-12 h-12 border border-purple-500 rounded flex items-center justify-center bg-gray-800">
+                            <span className="text-blue-400 text-lg">💬</span>
                           </div>
                         ) : (
-                          <div className="w-16 h-16 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
-                            <span className="text-gray-400 text-2xl">❓</span>
+                          <div className="w-12 h-12 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
+                            <span className="text-gray-400 text-lg">❓</span>
                           </div>
                         )}
                       </td>
                       
-                      {/* Content - только текст, если есть */}
                       <td className="py-3 px-4">
                         {record.content ? (
                           <div className="max-w-xs truncate text-white" title={record.content}>
@@ -441,7 +444,6 @@ export default function AdminPage() {
                         )}
                       </td>
                       
-                      {/* Settings */}
                       <td className="py-3 px-4 text-gray-300">
                         {record.auto_delete && <div className="text-red-400">🗑️ Delete after view</div>}
                         {record.expire_at && (
@@ -459,11 +461,14 @@ export default function AdminPage() {
                         )}
                       </td>
                       
-                      {/* QR Code */}
                       <td className="py-3 px-4">
                         {record.image_url && (
                           <button
-                            onClick={() => showQRForImage(record.id)}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              showQRForImage(record.id)
+                            }}
                             className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-semibold"
                           >
                             📱 Show QR
@@ -471,7 +476,6 @@ export default function AdminPage() {
                         )}
                       </td>
                       
-                      {/* IP Address */}
                       <td className="py-3 px-4 text-gray-300">
                         {record.client_ip && (
                           <div className="font-mono text-sm">🌐 {record.client_ip}</div>
@@ -484,7 +488,6 @@ export default function AdminPage() {
                         )}
                       </td>
                       
-                      {/* Stats */}
                       <td className="py-3 px-4 text-gray-300 text-sm">
                         <div>👁️ Views: {record.views || 0}</div>
                         <div>📅 {new Date(record.created_at).toLocaleDateString()}</div>
@@ -496,7 +499,6 @@ export default function AdminPage() {
                         )}
                       </td>
                       
-                      {/* Actions - кнопки */}
                       <td className="py-3 px-4 space-y-1">
                         {record.image_url && (
                           <button
@@ -532,7 +534,6 @@ export default function AdminPage() {
             className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl border-2 border-purple-500 shadow-2xl max-w-md w-full mx-4 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Кнопка закрытия */}
             <button
               onClick={forceCloseModal}
               className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold hover:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
@@ -540,13 +541,11 @@ export default function AdminPage() {
               ✕
             </button>
             
-            {/* Заголовок */}
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-purple-400 mb-2">{modalTitle}</h3>
               <div className="w-16 h-1 bg-purple-500 mx-auto rounded"></div>
             </div>
             
-            {/* QR код */}
             <div className="text-center mb-6">
               <div className="bg-white p-4 rounded-lg inline-block shadow-lg">
                 <img 
@@ -558,7 +557,6 @@ export default function AdminPage() {
               <p className="text-gray-300 mt-3 text-sm">Scan with your phone camera</p>
             </div>
             
-            {/* Кнопки */}
             <div className="space-y-3">
               <button
                 onClick={downloadQRCode}

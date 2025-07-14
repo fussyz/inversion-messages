@@ -3,31 +3,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!    // обязательно в .env.local
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const id = params.id
-  // получаем IP клиента (Next.js 14+ автоматически заполняет req.ip)
-  const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0] || req.ip || null
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = params.id
 
-  // 1) обновляем stats
-  const { error } = await supabaseAdmin
-    .from('messages')
-    .update({
-      views: supabaseAdmin.raw('views + 1'),
-      last_read_at: new Date().toISOString(),
-      client_ip: ip,
-    })
-    .eq('id', id)
+    // Получаем IP адрес
+    const forwarded = request.headers.get('x-forwarded-for')
+    const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
 
-  if (error) {
-    console.error('Ошибка обновления stats:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    // Загружаем сообщение
+    const { data: message, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !message) {
+      return NextResponse.json({ error: 'Message not found' }, { status: 404 })
+    }
+
+    // Увеличиваем счетчик просмотров
+    await supabase
+      .from('messages')
+      .update({
+        views: (message.views || 0) + 1,
+        last_read_at: new Date().toISOString(),
+        client_ip: ip,
+        is_read: true
+      })
+      .eq('id', id)
+
+    return NextResponse.json(message)
+  } catch (error) {
+    console.error('Error in read API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  // 2) перенаправляем пользователя на страницу с картинкой
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}/message/${id}`)
 }
