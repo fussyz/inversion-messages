@@ -24,14 +24,17 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Черный фон */}
+      {/* Черный фон нижний уровень */}
       <div className="fixed top-0 left-0 w-full h-full bg-black z-0" />
       
       {/* Шумовой фон с полной непрозрачностью */}
       <div className="fixed top-0 left-0 w-full h-full z-10 noise-layer" />
       
-      {/* Контент поверх шума */}
-      <div className="relative z-20 min-h-screen flex items-center justify-center">
+      {/* Дополнительный черный слой с высоким z-index для перекрытия логотипа */}
+      <div className="fixed top-0 left-0 w-full h-full bg-black z-50" />
+      
+      {/* Контент поверх всех слоев */}
+      <div className="relative z-100 min-h-screen flex items-center justify-center">
         {error ? (
           <div className="text-white bg-black bg-opacity-70 p-4 rounded">
             {error}
@@ -62,13 +65,18 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
           margin: 0;
           padding: 0;
           overflow: hidden;
-          background-color: black;
+          background-color: black !important;
+        }
+        
+        /* Убираем все глобальные стили, которые могут мешать */
+        body > div:not(.app-container) {
+          display: none !important;
         }
         
         .noise-layer {
           background-image: url('/noise.gif');
           background-repeat: repeat;
-          background-size: 150px 150px; /* Более мелкий шум */
+          background-size: 100px 100px; /* Делаем шум еще мельче */
           opacity: 1;
           pointer-events: none;
         }
@@ -82,6 +90,7 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
           display: flex;
           align-items: center;
           justify-content: center;
+          z-index: 200;
         }
         
         .access-granted-text {
