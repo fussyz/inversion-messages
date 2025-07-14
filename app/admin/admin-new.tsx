@@ -202,80 +202,13 @@ export default function AdminNewPage() {
     setUploading(false)
   }
 
-  const showQRForImage = async (imageId: string) => {
-    try {
-      const viewLink = `${window.location.origin}/view/${imageId}`
-      // Добавляем параметры для прозрачного фона и убираем отступы
-      const qrDataURL = await QRCode.toDataURL(viewLink, {
-        margin: 0, // Убираем белые поля вокруг
-        width: 400, // Больший размер для лучшего качества
-        color: {
-          dark: "#000000",
-          light: "#00000000" // Прозрачный фон
-        },
-        type: 'image/png' // Явно указываем формат PNG
-      })
-      setGeneratedLink(viewLink)
-      setQRCodeDataURL(qrDataURL)
-      setModalTitle(`QR Code for Image ${imageId}`)
-      setCurrentImageId(imageId)
-      setShowQRModal(true)
-    } catch (error) {
-      alert('Failed to generate QR code')
-    }
-  }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      // Убрали алерт по запросу пользователя
-    } catch (error) {
-      console.error('Failed to copy:', error)
-    }
-  }
 
-  const downloadQRCode = () => {
-    const link = document.createElement('a')
-    link.href = qrCodeDataURL
-    link.download = `QR-код-${currentImageId}.png`
-    link.click()
-  }
+  // Removed duplicate downloadQRCode function to fix redeclaration error
 
-  const handleLogout = async () => {
-    if (!supabase) {
-      alert('Supabase client is not initialized')
-      return
-    }
-    await supabase.auth.signOut()
-    router.push('/signin')
-  }
+  // Duplicate handleLogout removed to fix redeclaration error
 
-  const deleteRecord = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this record?')) return
-    if (!supabase) {
-      alert('Supabase client is not initialized')
-      return
-    }
-    try {
-      const { error } = await supabase.from('messages').delete().eq('id', id)
-      if (error) {
-        alert('Failed to delete record')
-      } else {
-        alert('Record deleted successfully')
-        loadMessages()
-      }
-    } catch (error) {
-      alert('Failed to delete record')
-    }
-  }
 
-  const forceCloseModal = () => {
-    setShowQRModal(false)
-    setGeneratedLink('')
-    setQRCodeDataURL('')
-    setModalTitle('')
-    setCurrentImageId('')
-  }
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -284,15 +217,6 @@ export default function AdminNewPage() {
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [])
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleString()
-    } catch (e) {
-      return dateString
-    }
-  }
 
   const handleMessageSubmit = async () => {
     if (!supabase) {
@@ -403,15 +327,14 @@ export default function AdminNewPage() {
   const showQRForImage = async (imageId: string) => {
     try {
       const viewLink = `${window.location.origin}/view/${imageId}`
-      // Добавляем параметры для прозрачного фона и убираем отступы
       const qrDataURL = await QRCode.toDataURL(viewLink, {
-        margin: 0, // Убираем белые поля вокруг
-        width: 400, // Больший размер для лучшего качества
+        margin: 0, // Убираем отступы вокруг QR-кода
+        width: 400,
         color: {
-          dark: "#000000",
-          light: "#00000000" // Прозрачный фон
+          dark: "#000000", // Черный цвет для точек
+          light: "#00000000" // Прозрачный фон (полностью прозрачный)
         },
-        type: 'image/png' // Явно указываем формат PNG
+        type: 'image/png'
       })
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
