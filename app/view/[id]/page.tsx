@@ -25,31 +25,23 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden bg-black">
-      {/* Фон – noise.gif на всю страницу */}
-      <div className="absolute top-0 left-0 w-full h-full z-0">
-        <Image
-          src="/noise.gif"
-          alt="Noise background"
-          fill
-          className="object-cover opacity-100 pointer-events-none"
-        />
-      </div>
+      {/* Фон – noise.gif с возможностью регулировки размера через background-size */}
+      <div className="absolute top-0 left-0 w-full h-full z-0 noise-background" />
       
       {/* Контент сообщения */}
       <div className="relative z-10 flex items-center justify-center">
         {error ? (
           <div className="text-white">{error}</div>
         ) : message && message.image_url ? (
-          // Если есть изображение, выводим только его в отдельном контейнере
-          <div className="image-wrapper">
-            <Image
-              src={message.image_url}
-              alt={`Image for ${id}`}
-              width={800}
-              height={600}
-              className="object-contain rounded"
-            />
-          </div>
+          // Если есть изображение, выводим его без лишних обёрток,
+          // чтобы отображалась в реальном размере
+          <Image
+            src={message.image_url}
+            alt={`Image for ${id}`}
+            width={800}
+            height={600}
+            className="object-contain"
+          />
         ) : message && message.content ? (
           // Если сообщение текстовое, используем стиль ACCESS GRANTED
           <div className="access-granted-overlay">
@@ -64,6 +56,14 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
       </div>
       
       <style jsx global>{`
+        /* Настройка шума: регулируйте background-size для изменения масштаба шума */
+        .noise-background {
+          background-image: url('/noise.gif');
+          background-repeat: repeat;
+          background-size: 200px 200px; /* Измените значения для более мелкого или крупного шума */
+          opacity: 1;
+          pointer-events: none;
+        }
         .access-granted-overlay {
           display: flex;
           position: fixed;
@@ -108,16 +108,6 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
           35% { clip: rect(30px, 9999px, 75px, 0); transform: skew(0.8deg); }
           40% { clip: rect(50px, 9999px, 68px, 0); transform: skew(1deg); }
           100% { clip: rect(42px, 9999px, 44px, 0); transform: skew(0.5deg); }
-        }
-        .image-wrapper {
-          position: relative;
-          z-index: 20;
-          /* Центрирование и отступы можно подправить по необходимости */
-          padding: 10px;
-          background-color: rgba(0, 0, 0, 0.4);
-          border: 2px solid #ff00ff;
-          border-radius: 8px;
-          box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
         }
       `}</style>
     </div>
