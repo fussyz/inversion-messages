@@ -174,7 +174,15 @@ export default function AdminNewPage() {
         throw new Error(`Database insert failed: ${dbError.message || JSON.stringify(dbError)}`)
       }
       const viewLink = `${window.location.origin}/view/${dbData.id}`
-      const qrDataURL = await QRCode.toDataURL(viewLink)
+      const qrDataURL = await QRCode.toDataURL(viewLink, {
+        margin: 0,
+        width: 400,
+        color: {
+          dark: "#000000", 
+          light: "#00000000" // Прозрачный фон
+        },
+        type: 'image/png'
+      })
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle('Image Uploaded Successfully!')
@@ -193,7 +201,16 @@ export default function AdminNewPage() {
   const showQRForImage = async (imageId: string) => {
     try {
       const viewLink = `${window.location.origin}/view/${imageId}`
-      const qrDataURL = await QRCode.toDataURL(viewLink)
+      // Добавляем параметры для прозрачного фона и убираем отступы
+      const qrDataURL = await QRCode.toDataURL(viewLink, {
+        margin: 0, // Убираем белые поля вокруг
+        width: 400, // Больший размер для лучшего качества
+        color: {
+          dark: "#000000",
+          light: "#00000000" // Прозрачный фон
+        },
+        type: 'image/png' // Явно указываем формат PNG
+      })
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle(`QR Code for Image ${imageId}`)
@@ -545,7 +562,7 @@ export default function AdminNewPage() {
       <div style={{ 
         padding: '25px',
         borderRadius: '12px',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+        boxShadow: 'none'
       }}>
         <div style={{ 
           display: 'flex', 
@@ -669,7 +686,7 @@ export default function AdminNewPage() {
                     style={{ 
                       padding: '12px', 
                       textAlign: 'left', 
-                      backgroundColor: '#1f2937',
+                      backgroundColor: 'transparent', // Меняем на прозрачный
                       color: '#d1d5db',
                       fontWeight: '600',
                       borderBottom: '2px solid #374151',
@@ -690,7 +707,7 @@ export default function AdminNewPage() {
                   <th style={{ 
                     padding: '12px', 
                     textAlign: 'left', 
-                    backgroundColor: '#1f2937',
+                    backgroundColor: 'transparent', // Меняем на прозрачный
                     color: '#d1d5db',
                     fontWeight: '600',
                     borderBottom: '2px solid #374151',
@@ -700,7 +717,7 @@ export default function AdminNewPage() {
                   <th style={{ 
                     padding: '12px', 
                     textAlign: 'left', 
-                    backgroundColor: '#1f2937',
+                    backgroundColor: 'transparent', // Меняем на прозрачный
                     color: '#d1d5db',
                     fontWeight: '600',
                     borderBottom: '2px solid #374151',
@@ -713,7 +730,7 @@ export default function AdminNewPage() {
                     style={{ 
                       padding: '12px', 
                       textAlign: 'left', 
-                      backgroundColor: '#1f2937',
+                      backgroundColor: 'transparent', // Меняем на прозрачный
                       color: '#d1d5db',
                       fontWeight: '600',
                       borderBottom: '2px solid #374151',
@@ -735,7 +752,7 @@ export default function AdminNewPage() {
                     style={{ 
                       padding: '12px', 
                       textAlign: 'left', 
-                      backgroundColor: '#1f2937',
+                      backgroundColor: 'transparent', // Меняем на прозрачный
                       color: '#d1d5db',
                       fontWeight: '600',
                       borderBottom: '2px solid #374151',
@@ -754,7 +771,7 @@ export default function AdminNewPage() {
                   <th style={{ 
                     padding: '12px', 
                     textAlign: 'left', 
-                    backgroundColor: '#1f2937',
+                    backgroundColor: 'transparent', // Меняем на прозрачный
                     color: '#d1d5db',
                     fontWeight: '600',
                     borderBottom: '2px solid #374151',
@@ -764,7 +781,7 @@ export default function AdminNewPage() {
                   <th style={{ 
                     padding: '12px', 
                     textAlign: 'left', 
-                    backgroundColor: '#1f2937',
+                    backgroundColor: 'transparent', // Меняем на прозрачный
                     color: '#d1d5db',
                     fontWeight: '600',
                     borderBottom: '2px solid #374151',
@@ -780,14 +797,14 @@ export default function AdminNewPage() {
                   <tr 
                     key={record.id} 
                     style={{ 
-                      backgroundColor: index % 2 === 0 ? '#111827' : '#1f2937',
+                      backgroundColor: 'transparent', // Полностью прозрачный фон
                       transition: 'background-color 0.2s'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#374151'
+                      e.currentTarget.style.backgroundColor = 'rgba(55, 65, 81, 0.3)' // Полупрозрачный при наведении
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#111827' : '#1f2937'
+                      e.currentTarget.style.backgroundColor = 'transparent'
                     }}
                   >
                     <td style={{ 
