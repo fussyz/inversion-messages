@@ -584,14 +584,11 @@ export default function AdminPage() {
             className="bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 p-8 rounded-3xl border border-purple-500/50 shadow-2xl max-w-lg w-full mx-4 relative animate-in zoom-in duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Градиентная рамка */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 p-[1px]">
               <div className="h-full w-full rounded-3xl bg-gray-900"></div>
             </div>
             
-            {/* Контент */}
             <div className="relative z-10">
-              {/* Кнопка закрытия */}
               <button
                 onClick={forceCloseModal}
                 className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold hover:bg-purple-500/20 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 hover:scale-110"
@@ -599,7 +596,6 @@ export default function AdminPage() {
                 ✕
               </button>
               
-              {/* Заголовок */}
               <div className="text-center mb-8 pt-4">
                 <div className="mb-4">
                   <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -612,7 +608,6 @@ export default function AdminPage() {
                 <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full"></div>
               </div>
               
-              {/* QR код */}
               <div className="text-center mb-8">
                 <div className="bg-white p-6 rounded-2xl inline-block shadow-2xl border-4 border-purple-100">
                   <img 
@@ -624,7 +619,6 @@ export default function AdminPage() {
                 <p className="text-purple-300 mt-4 text-lg font-medium">Scan with your phone camera</p>
               </div>
               
-              {/* Кнопки */}
               <div className="space-y-4">
                 <button
                   onClick={downloadQRCode}
