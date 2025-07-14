@@ -47,6 +47,12 @@ export default function AdminNewPage() {
   const [messageType, setMessageType] = useState<'image' | 'text'>('image')
   const [textContent, setTextContent] = useState('')
 
+  // Новые состояния для настройки QR-кода
+  const [qrDarkColor, setQrDarkColor] = useState('#000000')
+  const [qrBgColor, setQrBgColor] = useState('#ffffff')
+  const [qrLogo, setQrLogo] = useState<File | null>(null)
+  const [qrLogoPreview, setQrLogoPreview] = useState<string>('')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -324,18 +330,80 @@ export default function AdminNewPage() {
     setUploading(false)
   }
 
-  const showQRForImage = async (imageId: string) => {
+  // Функция для добавления логотипа на QR-код
+  const addLogoToQR = (qrDataURL: string, logoFile: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const qrImage = new Image()
+      const logoImage = new Image()
+      
+      qrImage.onload = () => {
+        canvas.width = qrImage.width
+        canvas.height = qrImage.height
+        ctx!.drawImage(qrImage, 0, 0)
+        
+        // Конвертация файла логотипа в URL
+        const logoURL = URL.createObjectURL(logoFile)
+        
+        logoImage.onload = () => {
+          // Размер логотипа (~25% от размера QR-кода)
+          const logoSize = qrImage.width * 0.25
+          const logoX = (qrImage.width - logoSize) / 2
+          const logoY = (qrImage.height - logoSize) / 2
+          
+          // Добавляем белый фон под логотипом
+          ctx!.fillStyle = '#ffffff'
+          ctx!.fillRect(logoX - 5, logoY - 5, logoSize + 10, logoSize + 10)
+          
+          // Рисуем логотип
+          ctx!.drawImage(logoImage, logoX, logoY, logoSize, logoSize)
+          
+          // Конвертируем canvas обратно в dataURL
+          const resultDataURL = canvas.toDataURL('image/png')
+          URL.revokeObjectURL(logoURL)
+          resolve(resultDataURL)
+        }
+        
+        logoImage.onerror = reject
+        logoImage.src = logoURL
+      }
+      
+      qrImage.onerror = reject
+      qrImage.src = qrDataURL
+    })
+  }
+
+  // Обновленная функция генерации QR-кода
+  const generateQRCode = async (url: string) => {
     try {
-      const viewLink = `${window.location.origin}/view/${imageId}`
-      const qrDataURL = await QRCode.toDataURL(viewLink, {
-        margin: 0, // Убираем отступы вокруг QR-кода
+      const qrDataURL = await QRCode.toDataURL(url, {
+        margin: 0,
         width: 400,
         color: {
-          dark: "#000000", // Черный цвет для точек
-          light: "#00000000" // Прозрачный фон (полностью прозрачный)
+          dark: qrDarkColor,
+          light: qrBgColor === 'transparent' ? '#00000000' : qrBgColor
         },
         type: 'image/png'
       })
+      
+      // Если выбран логотип, добавляем его на QR-код
+      if (qrLogo) {
+        const qrWithLogo = await addLogoToQR(qrDataURL, qrLogo)
+        return qrWithLogo
+      }
+      
+      return qrDataURL
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+      throw error
+    }
+  }
+
+  const showQRForImage = async (imageId: string) => {
+    try {
+      const viewLink = `${window.location.origin}/view/${imageId}`
+      const qrDataURL = await generateQRCode(viewLink)
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle(`QR Code for Image ${imageId}`)
@@ -448,6 +516,52 @@ export default function AdminNewPage() {
       )}
     </td>
   )
+
+  // Добавьте эти состояния в начало компонента
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Добавьте функции для обработки drag-and-drop событий
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      // Проверяем, что это изображение
+      if (file.type.startsWith('image/')) {
+        setSelectedFile(file)
+        // Создаем preview
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          // Можно добавить состояние для предпросмотра, если нужно
+        }
+        reader.readAsDataURL(file)
+      } else {
+        alert('Please drop an image file')
+      }
+    }
+  }
 
   if (loading) {
     return (
@@ -1224,7 +1338,7 @@ export default function AdminNewPage() {
                       borderBottomRightRadius: index === messages.length - 1 ? '8px' : '0'
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', justifyContent: 'flex-start' }}>
-                        {record.image_url && (
+                        {(record.image_url || record.content) && (
                           <>
                             <button
                               onClick={() => showQRForImage(record.id)}
@@ -1252,7 +1366,6 @@ export default function AdminNewPage() {
                             >
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                              </svg>
                             </button>
                             <button
                               onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
@@ -1520,6 +1633,211 @@ export default function AdminNewPage() {
           </div>
         </div>
       )}
+
+      {/* Настройки QR-кода */}
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+        <h4 style={{ color: '#d1d5db', fontSize: '16px', marginBottom: '12px' }}>QR Code Settings</h4>
+        
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
+              Foreground Color
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="color"
+                value={qrDarkColor}
+                onChange={e => setQrDarkColor(e.target.value)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent'
+                }}
+              />
+              <input
+                type="text"
+                value={qrDarkColor}
+                onChange={e => setQrDarkColor(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  backgroundColor: '#111827',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontFamily: 'monospace'
+                }}
+              />
+            </div>
+          </div>
+          
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
+              Background Color
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input
+                type="color"
+                value={qrBgColor === 'transparent' ? '#ffffff' : qrBgColor}
+                onChange={e => setQrBgColor(e.target.value)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent'
+                }}
+              />
+              <select
+                value={qrBgColor}
+                onChange={e => setQrBgColor(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  backgroundColor: '#111827',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontFamily: 'monospace'
+                }}
+              >
+                <option value="#ffffff">White</option>
+                <option value="#000000">Black</option>
+                <option value="transparent">Transparent</option>
+                <option value={qrBgColor}>{qrBgColor === 'transparent' ? '' : qrBgColor}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ marginTop: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
+            Logo (Optional)
+          </label>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setQrLogo(file);
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setQrLogoPreview(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                } else {
+                  setQrLogoPreview('');
+                }
+              }}
+              style={{ 
+                display: 'none'
+              }}
+              id="qr-logo-input"
+            />
+            <label 
+              htmlFor="qr-logo-input"
+              style={{
+                flex: 1,
+                padding: '10px',
+                backgroundColor: '#1f2937',
+                border: '1px dashed #4b5563',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '40px'
+              }}
+            >
+              {qrLogoPreview ? 'Change Logo' : 'Select Logo'}
+            </label>
+            
+            {qrLogoPreview && (
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '8px',
+                overflow: 'hidden',
+                position: 'relative',
+                border: '1px solid #4b5563'
+              }}>
+                <img 
+                  src={qrLogoPreview} 
+                  alt="Logo Preview" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover' 
+                  }} 
+                />
+                <button
+                  onClick={() => {
+                    setQrLogo(null);
+                    setQrLogoPreview('');
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    color: 'white',
+                    border: 'none',
+                    width: '20px',
+                    height: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                  title="Remove Logo"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <button
+          onClick={async () => {
+            const viewLink = `${window.location.origin}/view/${currentImageId}`;
+            const newQrDataURL = await generateQRCode(viewLink);
+            setQRCodeDataURL(newQrDataURL);
+          }}
+          style={{
+            width: '100%',
+            padding: '10px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '14px',
+            marginTop: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Apply Changes
+        </button>
+      </div>
 
       <style dangerouslySetInnerHTML={{
         __html: `
