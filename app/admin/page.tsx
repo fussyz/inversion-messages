@@ -1,7 +1,7 @@
 // app/admin/page.tsx
 'use client'
 
-// Micro change for deployment test
+// Improved design for admin panel - v2
 
 export const dynamic = 'force-dynamic'
 
@@ -207,127 +207,176 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 to-purple-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-800 to-purple-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-pink-500 mx-auto"></div>
-          <p className="mt-6 text-2xl font-bold text-white">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-l-4 border-pink-500 mx-auto"></div>
+          <p className="mt-6 text-2xl font-bold text-white animate-pulse">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-br from-[#170048] via-[#1d0736] to-[#0f051d] text-white">
+    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E] text-white">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-5xl md:text-7xl font-black bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-400 via-purple-400 to-blue-400 tracking-tight drop-shadow-lg">
-            Admin Dashboard
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+          <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-400 to-yellow-400 tracking-tight drop-shadow-lg">
+            ADMIN DASHBOARD
           </h1>
           <button
             onClick={handleLogout}
-            className="px-7 py-3 bg-gradient-to-br from-pink-600 via-fuchsia-500 to-purple-700 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all"
+            className="px-7 py-3 bg-gradient-to-br from-red-500 to-purple-700 text-white rounded-xl font-bold shadow-[0_8px_30px_rgb(168_85_247_/_0.3)] hover:shadow-[0_8px_30px_rgb(168_85_247_/_0.5)] transition-all duration-300"
           >
             Sign Out
           </button>
         </div>
 
         {user && (
-          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-lg border border-purple-500/30 mb-10 shadow-md">
-            <p className="text-2xl font-semibold text-gray-200">Welcome to the admin panel!</p>
+          <div className="bg-black/40 backdrop-blur-xl p-6 rounded-2xl border border-indigo-500/30 mb-10 shadow-xl transform hover:scale-[1.01] transition-all duration-300">
+            <p className="text-2xl font-bold text-white">Welcome to the admin panel!</p>
             <p className="text-lg">
-              Logged in as: <span className="font-mono text-purple-300">{user.email}</span>
+              Logged in as: <span className="font-mono text-pink-300">{user.email}</span>
             </p>
           </div>
         )}
 
         {/* Image Upload Panel */}
-        <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 shadow-lg mb-12">
-          <h2 className="text-3xl font-semibold text-purple-300 mb-6">Upload Image</h2>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-base font-bold text-gray-300 mb-2">
+        <div className="bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-indigo-500/30 shadow-xl mb-12 transform hover:shadow-[0_10px_40px_rgba(131,88,255,0.15)] transition-all duration-300">
+          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-6">
+            Upload Image
+          </h2>
+          <div className="space-y-8">
+            <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-5 rounded-xl">
+              <label className="block text-lg font-bold text-white mb-3">
                 Select Image
               </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-medium file:bg-gradient-to-tr from-purple-600 to-blue-600 file:text-white hover:file:opacity-90 transition-all"
+                className="block w-full text-base text-gray-200 file:mr-5 file:py-3 file:px-6 file:rounded-xl file:border-0 file:font-medium file:bg-gradient-to-r file:from-pink-500 file:to-violet-600 file:text-white hover:file:bg-gradient-to-r hover:file:from-pink-600 hover:file:to-violet-700 transition-all cursor-pointer"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={deleteAfterView}
-                  onChange={(e) => setDeleteAfterView(e.target.checked)}
-                  className="form-checkbox h-5 w-5 text-purple-500"
-                />
-                <span className="text-base text-gray-200">Delete after opening</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-5 rounded-xl flex items-center space-x-4">
+                <div className="relative w-12 h-7">
+                  <input
+                    type="checkbox"
+                    checked={deleteAfterView}
+                    onChange={(e) => setDeleteAfterView(e.target.checked)}
+                    id="deleteToggle"
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor="deleteToggle"
+                    className={`absolute inset-0 rounded-full cursor-pointer transition duration-300 ${
+                      deleteAfterView ? 'bg-purple-600' : 'bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`absolute h-5 w-5 top-1 rounded-full transition-transform duration-300 transform ${
+                        deleteAfterView ? 'translate-x-6 bg-white' : 'translate-x-1 bg-gray-300'
+                      }`}
+                    ></span>
+                  </label>
+                </div>
+                <span className="text-lg font-medium text-white">Delete after opening</span>
               </div>
-              <div>
-                <label className="block text-base font-bold text-gray-300 mb-2">
-                  Expiration (days, 0 = forever)
+              <div className="bg-gradient-to-r from-indigo-900/20 to-purple-900/20 p-5 rounded-xl">
+                <label className="block text-lg font-medium text-white mb-3">
+                  Expiration (days)
                 </label>
                 <input
                   type="number"
                   min="0"
                   value={expirationDays}
                   onChange={(e) => setExpirationDays(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:border-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-black/40 border border-purple-500/40 rounded-xl text-white focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
+                  placeholder="0 = forever"
                 />
               </div>
             </div>
             <button
               onClick={handleFileUpload}
               disabled={!selectedFile || uploading}
-              className="w-full py-3 rounded-2xl text-lg font-bold bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 shadow-lg text-white transition-all hover:shadow-xl focus:outline-none disabled:opacity-60"
+              className="w-full py-4 rounded-xl text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 shadow-lg hover:shadow-pink-500/20 text-white transition-all duration-300 hover:-translate-y-1 disabled:opacity-60 disabled:translate-y-0 disabled:hover:shadow-none"
             >
-              {uploading ? 'Uploading...' : 'Upload Image'}
+              {uploading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Uploading...
+                </span>
+              ) : 'Upload Image'}
             </button>
           </div>
         </div>
 
         {/* Records Table */}
-        <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 shadow-lg">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-purple-300">
-              All Records ({messages.length})
+        <div className="bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-indigo-500/30 shadow-xl transform hover:shadow-[0_10px_40px_rgba(131,88,255,0.15)] transition-all duration-300">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+              All Records <span className="bg-purple-900 text-white text-xl px-3 py-1 rounded-full">{messages.length}</span>
             </h2>
             <button
               onClick={loadMessages}
               disabled={loadingMessages}
-              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-700 text-white rounded-2xl font-bold transition-all hover:shadow-xl disabled:opacity-50"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-bold transition-all duration-300 hover:-translate-y-1 hover:shadow-lg disabled:opacity-50 disabled:translate-y-0"
             >
-              {loadingMessages ? 'Loading...' : 'Refresh'}
+              {loadingMessages ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <svg className="mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </span>
+              )}
             </button>
           </div>
           {loadingMessages ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto"></div>
-              <p className="mt-2">Loading records...</p>
+            <div className="text-center py-16">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-pink-500"></div>
+              <p className="mt-4 text-xl text-gray-300">Loading records...</p>
             </div>
           ) : messages.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No records yet.</p>
+            <div className="text-center py-16 bg-indigo-900/20 rounded-2xl">
+              <svg className="mx-auto h-16 w-16 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <p className="mt-4 text-2xl text-gray-400 font-light">No records found</p>
+              <p className="mt-2 text-gray-500">Upload an image to get started</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-500 scrollbar-track-gray-800 rounded-2xl">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="py-4 px-5 text-purple-300 font-bold">ID</th>
-                    <th className="py-4 px-5 text-purple-300 font-bold">Preview</th>
-                    <th className="py-4 px-5 text-purple-300 font-bold">Settings</th>
-                    <th className="py-4 px-5 text-purple-300 font-bold">QR Code</th>
-                    <th className="py-4 px-5 text-purple-300 font-bold">IP Address</th>
-                    <th className="py-4 px-5 text-purple-300 font-bold">Stats</th>
-                    <th className="py-4 px-5 text-purple-300 font-bold">Actions</th>
+                  <tr className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 rounded-t-2xl">
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider rounded-tl-2xl">ID</th>
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider">Preview</th>
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider">Settings</th>
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider">QR Code</th>
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider">IP Address</th>
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider">Stats</th>
+                    <th className="py-4 px-5 text-pink-300 font-bold uppercase text-sm tracking-wider rounded-tr-2xl">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((record) => (
+                  {messages.map((record, index) => (
                     <tr
                       key={record.id}
-                      className="group border-b border-gray-800 hover:bg-gray-700/50 transition-all"
+                      className={`group border-t border-purple-900/30 hover:bg-indigo-900/30 transition-all duration-200 ${
+                        index === messages.length - 1 ? 'rounded-b-2xl' : ''
+                      }`}
                     >
                       <td className="py-4 px-5 text-purple-200 font-mono">
                         {record.image_url ? (
@@ -335,7 +384,7 @@ export default function AdminPage() {
                             href={`/view/${record.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 underline font-bold transition-colors"
+                            className="text-blue-400 hover:text-pink-400 underline font-bold transition-colors"
                           >
                             {record.id}
                           </a>
@@ -345,7 +394,7 @@ export default function AdminPage() {
                       </td>
                       <td className="py-4 px-5">
                         {record.image_url ? (
-                          <div className="w-8 h-8 border border-purple-500 rounded overflow-hidden bg-gray-800">
+                          <div className="w-12 h-12 border-2 border-pink-500/50 rounded-lg overflow-hidden bg-gray-800 shadow-lg shadow-pink-500/10 group-hover:shadow-pink-500/30 transition-all duration-300">
                             <img
                               src={record.image_url}
                               alt="Preview"
@@ -353,25 +402,31 @@ export default function AdminPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-8 h-8 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
-                            <span className="text-purple-400 text-xs">❓</span>
+                          <div className="w-12 h-12 border-2 border-gray-600 rounded-lg flex items-center justify-center bg-gray-800/50">
+                            <span className="text-gray-400 text-xl">❓</span>
                           </div>
                         )}
                       </td>
                       <td className="py-4 px-5 text-gray-300 text-sm">
                         {record.auto_delete && (
-                          <div className="text-red-400 font-bold">🗑️ Delete after view</div>
+                          <div className="mb-2 flex items-center text-red-400 font-bold bg-red-900/20 px-3 py-1.5 rounded-lg">
+                            <span className="text-lg mr-1.5">🗑️</span> Delete after view
+                          </div>
                         )}
                         {record.expire_at && (
-                          <div className="text-yellow-400 font-semibold">
-                            ⏰ Expires: {new Date(record.expire_at).toLocaleDateString()}
+                          <div className="mb-2 flex items-center text-yellow-400 font-semibold bg-yellow-900/20 px-3 py-1.5 rounded-lg">
+                            <span className="text-lg mr-1.5">⏰</span> Expires: {new Date(record.expire_at).toLocaleDateString()}
                           </div>
                         )}
                         {record.days_to_live && (
-                          <div className="text-purple-300">📅 Days: {record.days_to_live}</div>
+                          <div className="mb-2 flex items-center text-purple-300 bg-purple-900/20 px-3 py-1.5 rounded-lg">
+                            <span className="text-lg mr-1.5">📅</span> Days: {record.days_to_live}
+                          </div>
                         )}
                         {!record.auto_delete && !record.expire_at && (
-                          <span className="text-green-400 font-bold">♾️ Permanent</span>
+                          <div className="mb-2 flex items-center text-green-400 font-bold bg-green-900/20 px-3 py-1.5 rounded-lg">
+                            <span className="text-lg mr-1.5">♾️</span> Permanent
+                          </div>
                         )}
                       </td>
                       <td className="py-4 px-5">
@@ -382,30 +437,47 @@ export default function AdminPage() {
                               e.stopPropagation();
                               showQRForImage(record.id);
                             }}
-                            className="px-4 py-2 bg-gradient-to-r from-green-400 via-emerald-500 to-fuchsia-500 text-white rounded shadow transition-all text-sm font-bold"
+                            className="px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg shadow transition-all duration-300 hover:scale-105 text-sm font-bold flex items-center"
                           >
-                            📱 Show QR
+                            <span className="mr-1.5">📱</span> Show QR
                           </button>
                         )}
                       </td>
                       <td className="py-4 px-5 text-gray-300 font-mono text-sm">
                         {record.client_ip ? (
-                          <div className="text-base">🌐 {record.client_ip}</div>
+                          <div className="bg-indigo-900/20 px-3 py-1.5 rounded-lg flex items-center">
+                            <span className="mr-1.5">🌐</span> {record.client_ip}
+                          </div>
                         ) : record.ip_address ? (
-                          <div className="text-base">🌐 {record.ip_address}</div>
+                          <div className="bg-indigo-900/20 px-3 py-1.5 rounded-lg flex items-center">
+                            <span className="mr-1.5">🌐</span> {record.ip_address}
+                          </div>
                         ) : (
-                          <span className="text-gray-500">No IP</span>
+                          <span className="text-gray-500 bg-gray-800/50 px-3 py-1.5 rounded-lg">No IP</span>
                         )}
                       </td>
-                      <td className="py-4 px-5 text-gray-300 text-sm">
-                        <div>👁️ <span className="font-bold">{record.views || 0}</span></div>
-                        <div>📅 {new Date(record.created_at).toLocaleDateString()}</div>
-                        {record.last_read_at && (
-                          <div>👀 {new Date(record.last_read_at).toLocaleDateString()}</div>
-                        )}
-                        {record.is_read && (
-                          <div className="text-green-400 font-bold">✅ Read</div>
-                        )}
+                      <td className="py-4 px-5">
+                        <div className="space-y-2">
+                          <div className="bg-blue-900/20 px-3 py-1.5 rounded-lg flex items-center text-blue-300">
+                            <span className="mr-1.5">👁️</span> 
+                            <span className="font-bold">{record.views || 0}</span>
+                          </div>
+                          <div className="bg-purple-900/20 px-3 py-1.5 rounded-lg flex items-center text-purple-300">
+                            <span className="mr-1.5">📅</span>
+                            {new Date(record.created_at).toLocaleDateString()}
+                          </div>
+                          {record.last_read_at && (
+                            <div className="bg-indigo-900/20 px-3 py-1.5 rounded-lg flex items-center text-indigo-300">
+                              <span className="mr-1.5">👀</span>
+                              {new Date(record.last_read_at).toLocaleDateString()}
+                            </div>
+                          )}
+                          {record.is_read && (
+                            <div className="bg-green-900/20 px-3 py-1.5 rounded-lg flex items-center text-green-300 font-bold">
+                              <span className="mr-1.5">✅</span> Read
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-5 space-y-3">
                         {record.image_url && (
@@ -413,16 +485,16 @@ export default function AdminPage() {
                             onClick={() =>
                               copyToClipboard(`${window.location.origin}/view/${record.id}`)
                             }
-                            className="w-full px-4 py-2 bg-gradient-to-tr from-blue-700 via-fuchsia-600 to-purple-700 text-white rounded shadow transition-all text-sm font-bold"
+                            className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-lg shadow transition-all duration-300 hover:scale-105 text-sm font-bold flex items-center justify-center"
                           >
-                            📋 Copy Link
+                            <span className="mr-1.5">📋</span> Copy Link
                           </button>
                         )}
                         <button
                           onClick={() => deleteRecord(record.id)}
-                          className="w-full px-4 py-2 bg-gradient-to-tr from-red-700 via-fuchsia-500 to-pink-700 text-white rounded shadow transition-all text-sm font-bold"
+                          className="w-full px-4 py-2.5 bg-gradient-to-r from-red-600 to-rose-700 text-white rounded-lg shadow transition-all duration-300 hover:scale-105 text-sm font-bold flex items-center justify-center"
                         >
-                          🗑️ Delete
+                          <span className="mr-1.5">🗑️</span> Delete
                         </button>
                       </td>
                     </tr>
@@ -437,58 +509,69 @@ export default function AdminPage() {
       {/* QR Code Modal */}
       {showQRModal && qrCodeDataURL && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadein"
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fadeIn"
           onClick={forceCloseModal}
+          style={{
+            animation: 'fadeIn 0.3s ease-out',
+            WebkitAnimation: 'fadeIn 0.3s ease-out',
+          }}
         >
           <div
-            className="relative bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 p-8 rounded-2xl border border-purple-500/50 shadow-2xl max-w-md w-full mx-4"
+            className="relative bg-gradient-to-br from-[#141E30] to-[#243B55] p-8 rounded-3xl border border-blue-500/30 shadow-2xl shadow-blue-500/20 max-w-md w-full mx-4 animate-scaleIn"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              animation: 'scaleIn 0.3s ease-out',
+              WebkitAnimation: 'scaleIn 0.3s ease-out',
+            }}
           >
             <button
               onClick={forceCloseModal}
-              className="absolute top-4 right-4 text-purple-300 hover:text-white text-2xl font-bold bg-gradient-to-br from-gray-800 to-gray-900 rounded-full w-10 h-10 flex items-center justify-center transition-all"
+              className="absolute top-4 right-4 text-gray-300 hover:text-white text-xl font-bold bg-black/30 hover:bg-black/50 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300"
             >
               ✕
             </button>
-            <div className="flex flex-col items-center mb-6">
-              <h3 className="text-2xl font-bold text-purple-400 mb-2 text-center">{modalTitle}</h3>
-              <div className="w-16 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+            <div className="flex flex-col items-center mb-8">
+              <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-3 text-center">{modalTitle}</h3>
+              <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
             </div>
-            <div className="flex flex-col items-center mb-6">
-              <div className="bg-white p-4 rounded-lg inline-block shadow-md">
+            <div className="flex flex-col items-center mb-8">
+              <div className="bg-white p-4 rounded-lg inline-block shadow-xl transform transition-all hover:scale-105 duration-300 border-4 border-indigo-500/30">
                 <img
                   src={qrCodeDataURL}
                   alt="QR Code"
-                  className="w-40 h-40 object-cover"
+                  className="w-48 h-48 object-cover"
                 />
               </div>
-              <p className="text-gray-300 mt-3 text-sm">Scan with your phone</p>
+              <p className="text-gray-300 mt-3 text-sm">Scan with your phone camera</p>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button
                 onClick={downloadQRCode}
-                className="w-full py-3 bg-green-600 text-white rounded-lg font-bold transition-all hover:bg-green-700"
+                className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-700 text-white rounded-xl font-bold transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20 hover:scale-[1.02] flex items-center justify-center"
               >
-                💾 Download QR Code
+                <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download QR Code
               </button>
               <div className="relative">
                 <input
                   type="text"
                   value={generatedLink}
                   readOnly
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none cursor-pointer text-sm"
+                  className="w-full px-4 py-3.5 bg-black/40 border border-indigo-500/40 rounded-xl text-white focus:border-pink-500 focus:outline-none cursor-pointer text-sm pr-28"
                   onClick={(e) => {
                     (e.target as HTMLInputElement).select();
                     copyToClipboard(generatedLink);
                   }}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <span className="text-purple-400 text-xs">📋 Click to copy</span>
+                  <span className="text-indigo-400 text-sm bg-indigo-900/30 py-1 px-2 rounded">Click to copy</span>
                 </div>
               </div>
               <button
                 onClick={forceCloseModal}
-                className="w-full py-3 bg-gray-700 text-white rounded-lg font-bold transition-all hover:bg-gray-600"
+                className="w-full py-3.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold transition-all duration-300"
               >
                 Close
               </button>
@@ -496,6 +579,35 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: rgba(31, 41, 55, 0.4);
+          border-radius: 100vh;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: rgba(139, 92, 246, 0.8);
+          border-radius: 100vh;
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+        .animate-scaleIn {
+          animation: scaleIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   )
 }
