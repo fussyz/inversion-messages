@@ -139,8 +139,8 @@ export default function AdminPage() {
         expire_at: expireAt?.toISOString() || null,
         days_to_live: expirationDays > 0 ? expirationDays : null,
         views: 0,
-        is_read: false,
-        created_at: new Date().toISOString()
+        is_read: false
+        // Убираем created_at - пусть база сама ставит
       }
 
       console.log('=== INSERTING TO DATABASE ===')
@@ -217,6 +217,32 @@ export default function AdminPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/signin')
+  }
+
+  // ДОБАВЬ функция удаления после copyToClipboard:
+
+  const deleteRecord = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this record?')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        console.error('Delete error:', error)
+        alert('Failed to delete record')
+      } else {
+        alert('Record deleted successfully')
+        loadMessages() // Обновляем список
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert('Failed to delete record')
+    }
   }
 
   if (loading) {
@@ -328,56 +354,70 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-gray-700">
                     <th className="py-3 px-4 text-purple-300">ID</th>
-                    <th className="py-3 px-4 text-purple-300">Type</th>
+                    <th className="py-3 px-4 text-purple-300">Preview</th>
                     <th className="py-3 px-4 text-purple-300">Content</th>
                     <th className="py-3 px-4 text-purple-300">Settings</th>
-                    <th className="py-3 px-4 text-purple-300">Actions</th>
+                    <th className="py-3 px-4 text-purple-300">QR Code</th>
+                    <th className="py-3 px-4 text-purple-300">IP Address</th>
                     <th className="py-3 px-4 text-purple-300">Stats</th>
+                    <th className="py-3 px-4 text-purple-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {messages.map((record) => (
                     <tr key={record.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
+                      {/* ID - гиперссылка */}
                       <td className="py-3 px-4 text-purple-200">
                         {record.image_url ? (
                           <a 
                             href={`/view/${record.id}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 underline"
+                            className="text-blue-400 hover:text-blue-300 underline font-bold"
                           >
-                            {record.id}
+                            #{record.id}
                           </a>
                         ) : (
-                          record.id
+                          <span className="font-bold">#{record.id}</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-white">
-                        {record.image_url ? (
-                          <span className="text-green-400">🖼️ Image</span>
-                        ) : record.content ? (
-                          <span className="text-blue-400">💬 Text</span>
-                        ) : (
-                          <span className="text-gray-400">❓ Unknown</span>
-                        )}
-                      </td>
+                      
+                      {/* Preview - превью картинки */}
                       <td className="py-3 px-4">
                         {record.image_url ? (
-                          <a 
-                            href={record.image_url} 
-                            target="_blank" 
-                            className="text-blue-400 hover:underline"
-                          >
-                            View Image
-                          </a>
+                          <div className="w-16 h-16 border border-purple-500 rounded overflow-hidden">
+                            <img 
+                              src={record.image_url} 
+                              alt="Preview" 
+                              className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform"
+                              onClick={() => window.open(record.image_url, '_blank')}
+                            />
+                          </div>
                         ) : record.content ? (
+                          <div className="w-16 h-16 border border-purple-500 rounded flex items-center justify-center bg-gray-800">
+                            <span className="text-blue-400 text-2xl">💬</span>
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
+                            <span className="text-gray-400 text-2xl">❓</span>
+                          </div>
+                        )}
+                      </td>
+                      
+                      {/* Content - только текст, если есть */}
+                      <td className="py-3 px-4">
+                        {record.content ? (
                           <div className="max-w-xs truncate text-white" title={record.content}>
                             {record.content}
                           </div>
+                        ) : record.image_url ? (
+                          <span className="text-green-400">🖼️ Image file</span>
                         ) : (
                           <span className="text-gray-500">No content</span>
                         )}
                       </td>
+                      
+                      {/* Settings */}
                       <td className="py-3 px-4 text-gray-300">
                         {record.auto_delete && <div className="text-red-400">🗑️ Delete after view</div>}
                         {record.expire_at && (
@@ -394,39 +434,60 @@ export default function AdminPage() {
                           <span className="text-green-400">♾️ Permanent</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 space-y-1">
+                      
+                      {/* QR Code */}
+                      <td className="py-3 px-4">
                         {record.image_url && (
-                          <>
-                            <button
-                              onClick={() => showQRForImage(record.id)}
-                              className="block px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                            >
-                              Show QR
-                            </button>
-                            <button
-                              onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
-                              className="block text-blue-400 hover:text-blue-300 underline text-sm"
-                            >
-                              Copy Link
-                            </button>
-                          </>
+                          <button
+                            onClick={() => showQRForImage(record.id)}
+                            className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-semibold"
+                          >
+                            📱 Show QR
+                          </button>
                         )}
                       </td>
+                      
+                      {/* IP Address */}
                       <td className="py-3 px-4 text-gray-300">
-                        <div>👁️ Views: {record.views || 0}</div>
-                        <div>📅 Created: {new Date(record.created_at).toLocaleString()}</div>
-                        {record.last_read_at && (
-                          <div>👀 Last read: {new Date(record.last_read_at).toLocaleString()}</div>
-                        )}
                         {record.client_ip && (
-                          <div>🌐 IP: {record.client_ip}</div>
+                          <div className="font-mono text-sm">🌐 {record.client_ip}</div>
                         )}
                         {record.ip_address && (
-                          <div>🌐 IP: {record.ip_address}</div>
+                          <div className="font-mono text-sm">🌐 {record.ip_address}</div>
+                        )}
+                        {!record.client_ip && !record.ip_address && (
+                          <span className="text-gray-500">No IP</span>
+                        )}
+                      </td>
+                      
+                      {/* Stats */}
+                      <td className="py-3 px-4 text-gray-300 text-sm">
+                        <div>👁️ Views: {record.views || 0}</div>
+                        <div>📅 {new Date(record.created_at).toLocaleDateString()}</div>
+                        {record.last_read_at && (
+                          <div>👀 {new Date(record.last_read_at).toLocaleDateString()}</div>
                         )}
                         {record.is_read && (
                           <div className="text-green-400">✅ Read</div>
                         )}
+                      </td>
+                      
+                      {/* Actions - кнопки */}
+                      <td className="py-3 px-4 space-y-1">
+                        {record.image_url && (
+                          <button
+                            onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
+                            className="block w-full px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            📋 Copy Link
+                          </button>
+                        )}
+                        <button
+                          onClick={() => deleteRecord(record.id)}
+                          className="block w-full px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                        >
+                          🗑️ Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -439,40 +500,62 @@ export default function AdminPage() {
 
       {/* Модальное окно с QR кодом */}
       {showQRModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-8 rounded-lg border border-purple-500 max-w-md w-full mx-4">
-            <h3 className="text-2xl font-bold mb-6 text-center">{modalTitle}</h3>
-            
-            <div className="text-center mb-6">
-              <img src={qrCodeDataURL} alt="QR Code" className="mx-auto mb-4" />
-              <button
-                onClick={downloadQRCode}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-              >
-                Download QR Code
-              </button>
-            </div>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">View Link:</label>
-              <input
-                type="text"
-                value={generatedLink}
-                readOnly
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:border-purple-500 focus:outline-none cursor-pointer"
-                onClick={(e) => {
-                  (e.target as HTMLInputElement).select()
-                  copyToClipboard(generatedLink)
-                }}
-              />
-            </div>
-            
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl border-2 border-purple-500 shadow-2xl max-w-md w-full mx-4 relative">
+            {/* Кнопка закрытия */}
             <button
               onClick={() => setShowQRModal(false)}
-              className="w-full py-3 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold"
             >
-              Close
+              ✕
             </button>
+            
+            {/* Заголовок */}
+            <div className="text-center mb-6">
+              <h3 className="text-3xl font-bold text-purple-400 mb-2">{modalTitle}</h3>
+              <div className="w-16 h-1 bg-purple-500 mx-auto rounded"></div>
+            </div>
+            
+            {/* QR код */}
+            <div className="text-center mb-6">
+              <div className="bg-white p-4 rounded-lg inline-block shadow-lg">
+                <img src={qrCodeDataURL} alt="QR Code" className="w-48 h-48" />
+              </div>
+              <p className="text-gray-300 mt-3 text-sm">Scan with your phone camera</p>
+            </div>
+            
+            {/* Кнопки */}
+            <div className="space-y-3">
+              <button
+                onClick={downloadQRCode}
+                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2"
+              >
+                💾 Download QR Code
+              </button>
+              
+              <div className="relative">
+                <input
+                  type="text"
+                  value={generatedLink}
+                  readOnly
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none cursor-pointer text-sm"
+                  onClick={(e) => {
+                    (e.target as HTMLInputElement).select()
+                    copyToClipboard(generatedLink)
+                  }}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-purple-400 text-sm">📋 Click to copy</span>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="w-full py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -480,7 +563,7 @@ export default function AdminPage() {
   )
 }
 
-// Выполни в Supabase SQL Editor:
+// Выполни in Supabase SQL Editor:
 // CREATE TABLE images (
 //   id SERIAL PRIMARY KEY,
 //   filename TEXT NOT NULL,
