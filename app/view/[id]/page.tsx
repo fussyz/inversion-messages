@@ -121,7 +121,7 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
             height: '100%',
             backgroundImage: 'url(/noise.gif)',
             backgroundRepeat: 'repeat',
-            backgroundSize: '100px 100px',
+            backgroundSize: 'auto', // Измените на 'auto' для оригинального размера
             zIndex: 1000001
           }}></div>
           
@@ -168,7 +168,7 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
         height: '100%',
         backgroundImage: 'url(/noise.gif)',
         backgroundRepeat: 'repeat',
-        backgroundSize: '100px 100px',
+        backgroundSize: 'auto', // Измените на 'auto' для оригинального размера
         zIndex: 1000001
       }}></div>
       
