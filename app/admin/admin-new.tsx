@@ -8,13 +8,18 @@ import QRCode from 'qrcode'
 // Принудительно указываем, что страница должна обновляться динамически
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY!
-)
+// Убедимся, что Supabase не создается с пустыми значениями
+const supabaseUrl = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL || '' : '';
+const supabaseKey = typeof window !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_KEY || '' : '';
+
+// Создаем клиент только если есть значения
+const supabase = supabaseUrl && supabaseKey ? 
+  createClient(supabaseUrl, supabaseKey) : 
+  null;
 
 export default function AdminNewPage() {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -36,43 +41,70 @@ export default function AdminNewPage() {
   useEffect(() => {
     const getUser = async () => {
       try {
+        // Проверка на существование клиента Supabase
+        if (!supabase) {
+          setError('Supabase client is not initialized. Check environment variables.')
+          setLoading(false)
+          return
+        }
+
         setShowQRModal(false)
         const { data: { session }, error } = await supabase.auth.getSession()
-        if (error || !session) {
+        if (error) {
+          console.error('Auth error:', error)
+          setError('Authentication error: ' + error.message)
+          setLoading(false)
+          return
+        }
+        
+        if (!session) {
           router.push('/signin')
           return
         }
+        
         if (session.user?.email !== 'semoo.smm@gmail.com') {
           router.push('/signin')
           return
         }
+        
         if (session.user?.email) {
           setUser({ email: session.user.email })
           loadMessages()
         }
+        
         setLoading(false)
       } catch (error) {
         console.error('Auth error:', error)
-        router.push('/signin')
+        setError('Unexpected error: ' + (error instanceof Error ? error.message : String(error)))
+        setLoading(false)
       }
     }
+    
     getUser()
   }, [router])
 
   const loadMessages = async () => {
+    if (!supabase) {
+      setError('Supabase client is not initialized')
+      return
+    }
+    
     setLoadingMessages(true)
     try {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .order('created_at', { ascending: false })
+      
       if (error) {
         console.error('Error loading messages:', error)
+        setError('Failed to load messages: ' + error.message)
       } else {
         setMessages(data || [])
       }
     } catch (error) {
       console.error('Error:', error)
+      setError('Unexpected error while loading messages')
     }
     setLoadingMessages(false)
   }
@@ -215,7 +247,51 @@ export default function AdminNewPage() {
     )
   }
 
-  // ОЧЕНЬ ПРОСТОЙ ДИЗАЙН - минимум стилей для отладки проблемы с превью
+  // Показ ошибки
+  if (error) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#111'
+      }}>
+        <div style={{ 
+          textAlign: 'center', 
+          color: 'white',
+          maxWidth: '600px',
+          padding: '20px',
+          background: '#222',
+          borderRadius: '10px'
+        }}>
+          <h2 style={{ color: 'red', marginBottom: '20px' }}>Error</h2>
+          <p style={{ marginBottom: '20px' }}>{error}</p>
+          <p>
+            <b>Environment variables:</b> <br/>
+            NEXT_PUBLIC_SUPABASE_URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set'} <br/>
+            NEXT_PUBLIC_SUPABASE_KEY: {process.env.NEXT_PUBLIC_SUPABASE_KEY ? 'Set' : 'Not set'}
+          </p>
+          <button 
+            onClick={() => router.push('/signin')}
+            style={{ 
+              marginTop: '20px',
+              padding: '10px 20px',
+              background: '#333',
+              border: 'none',
+              borderRadius: '5px',
+              color: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            Go to Sign In
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Обычный рендеринг страницы
   return (
     <div style={{ 
       padding: '20px', 
@@ -351,8 +427,7 @@ export default function AdminNewPage() {
             }}
           >
             {loadingMessages ? 'Loading...' : 'Refresh'}
-          </button>
-        </h2>
+          </h2>
 
         {loadingMessages ? (
           <p>Loading...</p>
