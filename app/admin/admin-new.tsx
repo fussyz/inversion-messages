@@ -411,13 +411,14 @@ export default function AdminNewPage() {
         padding: '15px',
         borderRadius: '5px'
       }}>
-        <h2 style={{ marginBottom: '15px', color: 'lime' }}>
-          Records ({messages.length})
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+          <h2 style={{ color: 'lime', margin: 0 }}>
+            Records ({messages.length})
+          </h2>
           <button
             onClick={loadMessages}
             disabled={loadingMessages}
             style={{
-              float: 'right',
               backgroundColor: loadingMessages ? '#555' : 'blue',
               color: 'white',
               padding: '5px 10px',
@@ -427,7 +428,8 @@ export default function AdminNewPage() {
             }}
           >
             {loadingMessages ? 'Loading...' : 'Refresh'}
-          </h2>
+          </button>
+        </div>
 
         {loadingMessages ? (
           <p>Loading...</p>
