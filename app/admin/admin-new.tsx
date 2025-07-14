@@ -1,30 +1,31 @@
 'use client'
 
-// COMPLETELY NEW ADMIN FILE TO BYPASS CACHE ISSUES
-export const dynamic = 'force-dynamic'
-
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
 
+// Принудительно указываем, что страница должна обновляться динамически
+export const dynamic = 'force-dynamic'
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_KEY!
 )
 
 export default function AdminNewPage() {
-  // State declarations remain the same...
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
   
+  // Image uploading states
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [deleteAfterView, setDeleteAfterView] = useState(false)
   const [expirationDays, setExpirationDays] = useState(0)
   const [uploading, setUploading] = useState(false)
-  
+
+  // QR Modal states
   const [showQRModal, setShowQRModal] = useState(false)
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
@@ -137,11 +138,7 @@ export default function AdminNewPage() {
   const showQRForImage = async (imageId: string) => {
     try {
       const viewLink = `${window.location.origin}/view/${imageId}`
-      const qrDataURL = await QRCode.toDataURL(viewLink, {
-        width: 256,
-        margin: 2,
-        color: { dark: '#000000', light: '#FFFFFF' }
-      })
+      const qrDataURL = await QRCode.toDataURL(viewLink)
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle(`QR Code for Image ${imageId}`)
@@ -204,156 +201,433 @@ export default function AdminNewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-l-4 border-green-500 mx-auto"></div>
-          <p className="mt-6 text-2xl font-bold text-white animate-pulse">Loading v2...</p>
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#111'
+      }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <h2>Loading...</h2>
         </div>
       </div>
     )
   }
 
+  // ОЧЕНЬ ПРОСТОЙ ДИЗАЙН - минимум стилей для отладки проблемы с превью
   return (
-    <div className="min-h-screen p-8 bg-black text-white">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-5xl font-extrabold text-center mb-8 bg-green-500 text-black p-4 rounded-xl">
-          NEW ADMIN DESIGN v2 - BYPASS CACHE
-        </h1>
-        
-        {user && (
-          <div className="bg-gray-800 p-6 rounded-xl mb-10">
-            <p className="text-2xl font-bold text-white">Welcome to the admin panel!</p>
-            <p className="text-lg">
-              Logged in as: <span className="font-mono text-green-300">{user.email}</span>
-            </p>
-          </div>
-        )}
+    <div style={{ 
+      padding: '20px', 
+      maxWidth: '1200px', 
+      margin: '0 auto',
+      backgroundColor: '#111',
+      color: 'white',
+      minHeight: '100vh'
+    }}>
+      <h1 style={{ 
+        fontSize: '24px', 
+        marginBottom: '20px',
+        color: 'lime',
+        backgroundColor: '#222',
+        padding: '10px'
+      }}>
+        ADMIN PANEL - SIMPLE VERSION
+      </h1>
 
-        {/* Image Upload Panel */}
-        <div className="bg-gray-800 p-8 rounded-xl mb-12">
-          <h2 className="text-3xl font-bold text-green-300 mb-6">
-            Upload Image
-          </h2>
-          <div className="space-y-8">
-            <div className="bg-gray-700 p-5 rounded-xl">
-              <label className="block text-lg font-bold text-white mb-3">
-                Select Image (small preview)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                className="block w-full text-base text-gray-200 file:mr-5 file:py-3 file:px-6 file:rounded-xl file:border-0 file:font-medium file:bg-green-600 file:text-white hover:file:bg-green-700 transition-all cursor-pointer"
-              />
-            </div>
-            <button
-              onClick={handleFileUpload}
-              disabled={!selectedFile || uploading}
-              className="w-full py-4 rounded-xl text-xl font-bold bg-green-600 text-white transition-all duration-300 hover:-translate-y-1 disabled:opacity-60 disabled:translate-y-0"
-            >
-              {uploading ? 'Uploading...' : 'Upload Image'}
-            </button>
-          </div>
+      {/* User info */}
+      {user && (
+        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#222' }}>
+          <p>Logged in as: {user.email}</p>
+          <button 
+            onClick={handleLogout}
+            style={{ 
+              padding: '5px 10px', 
+              backgroundColor: 'red', 
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginTop: '10px'
+            }}
+          >
+            Sign Out
+          </button>
         </div>
+      )}
 
-        {/* Records Table */}
-        <div className="bg-gray-800 p-8 rounded-xl">
-          <h2 className="text-3xl font-bold text-green-300 mb-6">
-            Records ({messages.length})
-          </h2>
-          {loadingMessages ? (
-            <div className="text-center py-8">
-              <div className="animate-spin h-10 w-10 border-4 border-green-500 rounded-full border-t-transparent mx-auto"></div>
-              <p className="mt-4 text-xl">Loading...</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No records yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-gray-700">
-                    <th className="py-3 px-4 text-green-300">ID</th>
-                    <th className="py-3 px-4 text-green-300">Preview</th>
-                    <th className="py-3 px-4 text-green-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {messages.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="border-t border-gray-700 hover:bg-gray-700/50"
-                    >
-                      <td className="py-3 px-4 font-mono">{record.id}</td>
-                      <td className="py-3 px-4">
-                        {record.image_url ? (
-                          <div className="w-6 h-6 border border-green-500/50 rounded">
-                            <img
-                              src={record.image_url}
-                              alt="Preview"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 border border-gray-600 rounded flex items-center justify-center bg-gray-700">
-                            <span className="text-gray-400 text-[8px]">?</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 space-y-2">
-                        {record.image_url && (
+      {/* Upload form */}
+      <div style={{ 
+        marginBottom: '30px', 
+        padding: '15px', 
+        backgroundColor: '#222',
+        borderRadius: '5px' 
+      }}>
+        <h2 style={{ marginBottom: '15px', color: 'lime' }}>Upload Image</h2>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>Select Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+            style={{ 
+              display: 'block', 
+              width: '100%',
+              backgroundColor: '#333',
+              color: 'white',
+              padding: '5px'
+            }}
+          />
+        </div>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', marginBottom: '5px' }}>
+            <input
+              type="checkbox"
+              checked={deleteAfterView}
+              onChange={(e) => setDeleteAfterView(e.target.checked)}
+            />
+            <span style={{ marginLeft: '8px' }}>Delete after opening</span>
+          </label>
+        </div>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Expiration (days, 0 = no expiration)
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={expirationDays}
+            onChange={(e) => setExpirationDays(parseInt(e.target.value) || 0)}
+            style={{ 
+              display: 'block', 
+              width: '100%',
+              backgroundColor: '#333',
+              color: 'white',
+              padding: '5px'
+            }}
+          />
+        </div>
+        
+        <button
+          onClick={handleFileUpload}
+          disabled={!selectedFile || uploading}
+          style={{ 
+            backgroundColor: uploading ? '#555' : 'lime', 
+            color: 'black',
+            padding: '10px',
+            border: 'none',
+            borderRadius: '5px',
+            width: '100%',
+            fontWeight: 'bold',
+            cursor: uploading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {uploading ? 'Uploading...' : 'Upload Image'}
+        </button>
+      </div>
+
+      {/* Records Table */}
+      <div style={{ 
+        backgroundColor: '#222',
+        padding: '15px',
+        borderRadius: '5px'
+      }}>
+        <h2 style={{ marginBottom: '15px', color: 'lime' }}>
+          Records ({messages.length})
+          <button
+            onClick={loadMessages}
+            disabled={loadingMessages}
+            style={{
+              float: 'right',
+              backgroundColor: loadingMessages ? '#555' : 'blue',
+              color: 'white',
+              padding: '5px 10px',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: loadingMessages ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {loadingMessages ? 'Loading...' : 'Refresh'}
+          </button>
+        </h2>
+
+        {loadingMessages ? (
+          <p>Loading...</p>
+        ) : messages.length === 0 ? (
+          <p>No records yet.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse',
+              backgroundColor: '#333'
+            }}>
+              <thead>
+                <tr>
+                  <th style={{ 
+                    padding: '8px', 
+                    textAlign: 'left', 
+                    borderBottom: '2px solid #444'
+                  }}>ID</th>
+                  <th style={{ 
+                    padding: '8px', 
+                    textAlign: 'left', 
+                    borderBottom: '2px solid #444'
+                  }}>Preview</th>
+                  <th style={{ 
+                    padding: '8px', 
+                    textAlign: 'left', 
+                    borderBottom: '2px solid #444'
+                  }}>Settings</th>
+                  <th style={{ 
+                    padding: '8px', 
+                    textAlign: 'left', 
+                    borderBottom: '2px solid #444'
+                  }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {messages.map((record) => (
+                  <tr key={record.id} style={{ borderBottom: '1px solid #444' }}>
+                    <td style={{ padding: '8px' }}>{record.id}</td>
+                    <td style={{ padding: '8px' }}>
+                      {record.image_url ? (
+                        <div style={{ 
+                          width: '24px', 
+                          height: '24px', 
+                          border: '1px solid white',
+                          overflow: 'hidden'
+                        }}>
+                          <img
+                            src={record.image_url}
+                            alt="Preview"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              maxWidth: '100%',
+                              maxHeight: '100%'
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          width: '24px', 
+                          height: '24px', 
+                          border: '1px solid gray',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#444'
+                        }}>?</div>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      {record.auto_delete && (
+                        <div style={{ color: 'red', marginBottom: '5px' }}>
+                          Delete after view
+                        </div>
+                      )}
+                      {record.expire_at && (
+                        <div style={{ color: 'yellow', marginBottom: '5px' }}>
+                          Expires: {new Date(record.expire_at).toLocaleDateString()}
+                        </div>
+                      )}
+                      {record.days_to_live && (
+                        <div style={{ marginBottom: '5px' }}>
+                          Days: {record.days_to_live}
+                        </div>
+                      )}
+                      {!record.auto_delete && !record.expire_at && (
+                        <div style={{ color: 'lime' }}>Permanent</div>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px' }}>
+                      {record.image_url && (
+                        <div style={{ marginBottom: '5px' }}>
                           <button
-                            onClick={() =>
-                              copyToClipboard(`${window.location.origin}/view/${record.id}`)
-                            }
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm"
+                            onClick={() => showQRForImage(record.id)}
+                            style={{
+                              backgroundColor: 'green',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '5px 10px',
+                              marginRight: '5px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Show QR
+                          </button>
+                          <button
+                            onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
+                            style={{
+                              backgroundColor: 'blue',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '5px 10px',
+                              cursor: 'pointer'
+                            }}
                           >
                             Copy Link
                           </button>
-                        )}
-                        <button
-                          onClick={() => deleteRecord(record.id)}
-                          className="px-3 py-1.5 bg-red-600 text-white rounded text-sm"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => deleteRecord(record.id)}
+                        style={{
+                          backgroundColor: 'red',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '5px 10px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* QR Code Modal */}
       {showQRModal && qrCodeDataURL && (
-        <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
-          onClick={forceCloseModal}
-        >
-          <div
-            className="bg-gray-800 p-6 rounded-xl max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={forceCloseModal}>
+          <div 
+            style={{
+              backgroundColor: '#222',
+              padding: '20px',
+              borderRadius: '10px',
+              maxWidth: '400px',
+              width: '100%',
+              position: 'relative'
+            }}
+            onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-2xl font-bold text-green-300 mb-4">{modalTitle}</h3>
-            <div className="bg-white p-4 rounded-lg mb-4">
-              <img
+            <button 
+              onClick={forceCloseModal}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: 'white',
+                fontSize: '18px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+            
+            <h3 style={{ 
+              color: 'lime', 
+              textAlign: 'center',
+              marginBottom: '15px',
+              fontSize: '18px'
+            }}>
+              {modalTitle}
+            </h3>
+            
+            <div style={{
+              backgroundColor: 'white',
+              padding: '10px',
+              marginBottom: '15px',
+              textAlign: 'center',
+              borderRadius: '5px'
+            }}>
+              <img 
                 src={qrCodeDataURL}
                 alt="QR Code"
-                className="w-40 h-40 object-cover mx-auto"
+                style={{
+                  width: '200px',
+                  height: '200px',
+                  maxWidth: '100%'
+                }}
               />
             </div>
+            
             <button
               onClick={downloadQRCode}
-              className="w-full py-2 bg-green-600 text-white rounded-lg font-bold mb-3"
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: 'green',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                marginBottom: '10px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
             >
               Download QR Code
             </button>
+            
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                type="text"
+                value={generatedLink}
+                readOnly
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#333',
+                  border: '1px solid #555',
+                  borderRadius: '5px',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+                onClick={(e) => {
+                  (e.target as HTMLInputElement).select();
+                  copyToClipboard(generatedLink);
+                }}
+              />
+              <div style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'gray',
+                fontSize: '12px',
+                pointerEvents: 'none'
+              }}>
+                Click to copy
+              </div>
+            </div>
+            
             <button
               onClick={forceCloseModal}
-              className="w-full py-2 bg-gray-600 text-white rounded-lg font-bold"
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: '#444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
             >
               Close
             </button>
