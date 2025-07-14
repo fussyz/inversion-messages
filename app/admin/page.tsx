@@ -1,8 +1,7 @@
 // app/admin/page.tsx
 'use client'
 
-// Improved design for admin panel - v2
-
+// DESIGN UPDATE: TEST BRIGHT COLORS - WILL BE CLEARLY VISIBLE IF APPLIED
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
@@ -16,18 +15,17 @@ const supabase = createClient(
 )
 
 export default function AdminPage() {
+  // State declarations remain the same...
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
-
-  // Image uploading states
+  
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [deleteAfterView, setDeleteAfterView] = useState(false)
   const [expirationDays, setExpirationDays] = useState(0)
   const [uploading, setUploading] = useState(false)
-
-  // QR Modal states
+  
   const [showQRModal, setShowQRModal] = useState(false)
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
@@ -217,20 +215,12 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-gradient-to-br from-[#0F0C29] via-[#302B63] to-[#24243E] text-white">
+    <div className="min-h-screen p-8 bg-gradient-to-br from-red-500 to-yellow-500 text-white">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-          <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-red-400 to-yellow-400 tracking-tight drop-shadow-lg">
-            ADMIN DASHBOARD
-          </h1>
-          <button
-            onClick={handleLogout}
-            className="px-7 py-3 bg-gradient-to-br from-red-500 to-purple-700 text-white rounded-xl font-bold shadow-[0_8px_30px_rgb(168_85_247_/_0.3)] hover:shadow-[0_8px_30px_rgb(168_85_247_/_0.5)] transition-all duration-300"
-          >
-            Sign Out
-          </button>
-        </div>
-
+        <h1 className="text-5xl font-extrabold text-center mb-8 bg-white text-red-500 p-4 rounded-xl">
+          ADMIN PAGE - UPDATED DESIGN TEST
+        </h1>
+        
         {user && (
           <div className="bg-black/40 backdrop-blur-xl p-6 rounded-2xl border border-indigo-500/30 mb-10 shadow-xl transform hover:scale-[1.01] transition-all duration-300">
             <p className="text-2xl font-bold text-white">Welcome to the admin panel!</p>
