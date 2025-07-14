@@ -18,6 +18,8 @@ export default function AdminPage() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [images, setImages] = useState<any[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
   
   // Состояния для загрузки изображений
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -29,10 +31,7 @@ export default function AdminPage() {
   const [showQRModal, setShowQRModal] = useState(false)
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
-  
-  // Новые состояния для изображений
-  const [images, setImages] = useState<any[]>([])
-  const [loadingImages, setLoadingImages] = useState(false)
+  const [modalTitle, setModalTitle] = useState('')
   
   const router = useRouter()
 
@@ -54,7 +53,7 @@ export default function AdminPage() {
         if (session.user?.email) {
           setUser({ email: session.user.email })
           loadMessages()
-          loadImages() // Загружаем изображения при монтировании
+          loadImages()
         }
         setLoading(false)
       } catch (error) {
@@ -70,7 +69,7 @@ export default function AdminPage() {
     setLoadingMessages(true)
     try {
       const { data, error } = await supabase
-        .from('messages') // Используем таблицу messages
+        .from('messages')
         .select('*')
         .order('created_at', { ascending: false })
       
@@ -85,7 +84,6 @@ export default function AdminPage() {
     setLoadingMessages(false)
   }
 
-  // Новая функция для загрузки изображений
   const loadImages = async () => {
     setLoadingImages(true)
     try {
@@ -114,14 +112,11 @@ export default function AdminPage() {
     setUploading(true)
     try {
       console.log('Starting upload...')
-      console.log('File:', selectedFile.name, selectedFile.size, selectedFile.type)
 
       // Генерируем уникальное имя файла
       const fileExt = selectedFile.name.split('.').pop()
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
       
-      console.log('Generated filename:', fileName)
-
       // Загружаем файл в Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('images')
@@ -130,10 +125,8 @@ export default function AdminPage() {
           upsert: false
         })
 
-      console.log('Upload result:', { uploadData, uploadError })
-
       if (uploadError) {
-        console.error('Upload error details:', uploadError)
+        console.error('Upload error:', uploadError)
         throw new Error(`Upload failed: ${uploadError.message}`)
       }
 
@@ -142,14 +135,11 @@ export default function AdminPage() {
         .from('images')
         .getPublicUrl(fileName)
 
-      console.log('Public URL:', urlData.publicUrl)
-
       // Вычисляем дату истечения
       let expiresAt = null
       if (expirationDays > 0) {
         expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + expirationDays)
-        expiresAt = expiresAt.toISOString()
       }
 
       // Сохраняем информацию о файле в базе данных
@@ -158,11 +148,8 @@ export default function AdminPage() {
         original_name: selectedFile.name,
         url: urlData.publicUrl,
         delete_after_view: deleteAfterView,
-        expires_at: expiresAt,
-        created_at: new Date().toISOString()
+        expires_at: expiresAt?.toISOString() || null
       }
-
-      console.log('Inserting to DB:', insertData)
 
       const { data: dbData, error: dbError } = await supabase
         .from('images')
@@ -170,10 +157,8 @@ export default function AdminPage() {
         .select()
         .single()
 
-      console.log('DB insert result:', { dbData, dbError })
-
       if (dbError) {
-        console.error('DB error details:', dbError)
+        console.error('DB error:', dbError)
         throw new Error(`Database error: ${dbError.message}`)
       }
 
@@ -185,6 +170,7 @@ export default function AdminPage() {
       
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
+      setModalTitle('Image Uploaded Successfully!')
       setShowQRModal(true)
       
       // Очищаем форму
@@ -192,14 +178,33 @@ export default function AdminPage() {
       setDeleteAfterView(false)
       setExpirationDays(0)
       
-      // Обновляем список (но не messages, а отдельный список изображений)
+      // Обновляем список изображений
+      loadImages()
       console.log('Upload successful!')
       
     } catch (error: any) {
-      console.error('Full upload error:', error)
+      console.error('Upload error:', error)
       alert(`Upload failed: ${error.message || 'Unknown error'}`)
     }
     setUploading(false)
+  }
+
+  const showQRForImage = async (imageId: number) => {
+    const viewLink = `${window.location.origin}/view/${imageId}`
+    const qrDataURL = await QRCode.toDataURL(viewLink)
+    
+    setGeneratedLink(viewLink)
+    setQRCodeDataURL(qrDataURL)
+    setShowQRModal(true)
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert('Link copied to clipboard!')
+    } catch (error) {
+      console.error('Failed to copy:', error)
+    }
   }
 
   const downloadQRCode = () => {
@@ -250,7 +255,6 @@ export default function AdminPage() {
           <h2 className="text-2xl font-semibold mb-6">Upload Image</h2>
           
           <div className="space-y-4">
-            {/* Выбор файла */}
             <div>
               <label className="block text-sm font-medium mb-2">Select Image</label>
               <input
@@ -261,7 +265,6 @@ export default function AdminPage() {
               />
             </div>
 
-            {/* Настройки */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="flex items-center space-x-2">
@@ -289,7 +292,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Кнопка загрузки */}
             <button
               onClick={handleFileUpload}
               disabled={!selectedFile || uploading}
@@ -301,24 +303,24 @@ export default function AdminPage() {
         </div>
 
         {/* Таблица изображений */}
-        <div className="bg-gray-900 p-6 rounded-lg border border-purple-500">
+        <div className="bg-gray-900 p-6 rounded-lg border border-purple-500 mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">Uploaded Images ({messages.length})</h2>
+            <h2 className="text-2xl font-semibold">Uploaded Images ({images.length})</h2>
             <button
-              onClick={loadMessages}
-              disabled={loadingMessages}
+              onClick={loadImages}
+              disabled={loadingImages}
               className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
-              {loadingMessages ? 'Loading...' : 'Refresh'}
+              {loadingImages ? 'Loading...' : 'Refresh'}
             </button>
           </div>
           
-          {loadingMessages ? (
+          {loadingImages ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
               <p className="mt-2">Loading images...</p>
             </div>
-          ) : messages.length === 0 ? (
+          ) : images.length === 0 ? (
             <p className="text-gray-400 text-center py-8">No images uploaded yet.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -328,14 +330,24 @@ export default function AdminPage() {
                     <th className="py-3 px-4 text-purple-300">ID</th>
                     <th className="py-3 px-4 text-purple-300">Filename</th>
                     <th className="py-3 px-4 text-purple-300">Settings</th>
+                    <th className="py-3 px-4 text-purple-300">QR Code</th>
                     <th className="py-3 px-4 text-purple-300">View Link</th>
                     <th className="py-3 px-4 text-purple-300">Created At</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((image) => (
+                  {images.map((image) => (
                     <tr key={image.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
-                      <td className="py-3 px-4 text-purple-200">{image.id}</td>
+                      <td className="py-3 px-4 text-purple-200">
+                        <a 
+                          href={`/view/${image.id}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          {image.id}
+                        </a>
+                      </td>
                       <td className="py-3 px-4 text-white">{image.original_name}</td>
                       <td className="py-3 px-4 text-gray-300">
                         {image.delete_after_view && <span className="text-red-400">Delete after view</span>}
@@ -349,17 +361,75 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <a 
-                          href={`/view/${image.id}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => showQRForImage(image.id)}
+                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                        >
+                          Show QR
+                        </button>
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => copyToClipboard(`${window.location.origin}/view/${image.id}`)}
                           className="text-blue-400 hover:text-blue-300 underline"
                         >
-                          View Image
-                        </a>
+                          Copy Link
+                        </button>
                       </td>
                       <td className="py-3 px-4 text-gray-300">
                         {new Date(image.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Таблица старых сообщений */}
+        <div className="bg-gray-900 p-6 rounded-lg border border-purple-500">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Messages ({messages.length})</h2>
+            <button
+              onClick={loadMessages}
+              disabled={loadingMessages}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              {loadingMessages ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+          
+          {loadingMessages ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+              <p className="mt-2">Loading messages...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <p className="text-gray-400 text-center py-8">No messages yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="py-3 px-4 text-purple-300">ID</th>
+                    <th className="py-3 px-4 text-purple-300">Content</th>
+                    <th className="py-3 px-4 text-purple-300">IP Address</th>
+                    <th className="py-3 px-4 text-purple-300">Created At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messages.map((message) => (
+                    <tr key={message.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
+                      <td className="py-3 px-4 text-purple-200">{message.id}</td>
+                      <td className="py-3 px-4 max-w-xs">
+                        <div className="truncate text-white" title={message.content}>
+                          {message.content}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-300">{message.ip_address || 'N/A'}</td>
+                      <td className="py-3 px-4 text-gray-300">
+                        {new Date(message.created_at).toLocaleString()}
                       </td>
                     </tr>
                   ))}
@@ -374,7 +444,7 @@ export default function AdminPage() {
       {showQRModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-900 p-8 rounded-lg border border-purple-500 max-w-md w-full mx-4">
-            <h3 className="text-2xl font-bold mb-6 text-center">Image Uploaded Successfully!</h3>
+            <h3 className="text-2xl font-bold mb-6 text-center">{modalTitle}</h3>
             
             <div className="text-center mb-6">
               <img src={qrCodeDataURL} alt="QR Code" className="mx-auto mb-4" />
@@ -392,8 +462,11 @@ export default function AdminPage() {
                 type="text"
                 value={generatedLink}
                 readOnly
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:border-purple-500 focus:outline-none"
-                onClick={(e) => e.target.select()}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:border-purple-500 focus:outline-none cursor-pointer"
+                onClick={(e) => {
+                  (e.target as HTMLInputElement).select()
+                  copyToClipboard(generatedLink)
+                }}
               />
             </div>
             
