@@ -543,7 +543,6 @@ export default function AdminNewPage() {
 
       {/* Records Table */}
       <div style={{ 
-        background: 'linear-gradient(to bottom right, #1e293b, #111827)',
         padding: '25px',
         borderRadius: '12px',
         boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'

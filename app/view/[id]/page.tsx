@@ -33,6 +33,31 @@ export default function ViewPage() {
     return () => clearInterval(interval)
   }, [countdown])
 
+  // Добавить в начале компонента (внутри функции, после объявления состояний)
+  useEffect(() => {
+    // Обработчик события закрытия вкладки
+    const handleTabClose = async () => {
+      if (message && message.auto_delete) {
+        try {
+          // Удаляем запись при закрытии вкладки
+          await fetch(`/api/delete/${message.id}`, {
+            method: 'DELETE'
+          })
+          console.log('Record deleted on tab close')
+        } catch (error) {
+          console.error('Failed to delete record:', error)
+        }
+      }
+    }
+
+    // Регистрируем обработчик
+    window.addEventListener('beforeunload', handleTabClose)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleTabClose)
+    }
+  }, [message, id])
+
   const loadMessage = async () => {
     try {
       const response = await fetch(`/api/read/${id}`)
@@ -159,11 +184,6 @@ export default function ViewPage() {
               <p className="text-gray-400">No content available</p>
             </div>
           )}
-        </div>
-
-        <div className="text-center mt-6 text-gray-400">
-          <p>Views: {message.views || 0}</p>
-          <p>Created: {new Date(message.created_at).toLocaleString()}</p>
         </div>
       </div>
     </div>
