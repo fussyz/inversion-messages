@@ -43,6 +43,10 @@ export default function AdminNewPage() {
   const [modalTitle, setModalTitle] = useState('')
   const [currentImageId, setCurrentImageId] = useState('')
 
+  // Новые состояния для текстового сообщения
+  const [messageType, setMessageType] = useState<'image' | 'text'>('image')
+  const [textContent, setTextContent] = useState('')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -290,6 +294,238 @@ export default function AdminNewPage() {
     }
   }
 
+  const handleMessageSubmit = async () => {
+    if (!supabase) {
+      alert('Supabase client is not initialized')
+      return
+    }
+    
+    // Проверка валидности в зависимости от типа сообщения
+    if (messageType === 'image' && !selectedFile) {
+      alert('Please select a file')
+      return
+    } else if (messageType === 'text' && !textContent) {
+      alert('Please enter message text')
+      return
+    }
+    
+    setUploading(true)
+    try {
+      let insertData: any = {
+        auto_delete: deleteAfterView,
+        days_to_live: expirationDays > 0 ? expirationDays : null,
+        views: 0,
+        is_read: false,
+      }
+      
+      // Настройка срока истечения
+      if (expirationDays > 0) {
+        const expireAt = new Date()
+        expireAt.setDate(expireAt.getDate() + expirationDays)
+        insertData.expire_at = expireAt.toISOString()
+      } else {
+        insertData.expire_at = null
+      }
+      
+      // Обработка в зависимости от типа сообщения
+      if (messageType === 'image' && selectedFile) {
+        // Загрузка изображения
+        const fileExt = selectedFile.name.split('.').pop()
+        const fileName = `images/${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(fileName, selectedFile, { cacheControl: '3600', upsert: false })
+        
+        if (uploadError) {
+          throw new Error(`Storage upload failed: ${uploadError.message}`)
+        }
+        
+        const { data: urlData, error: urlError } = await supabase.storage
+          .from('images')
+          .createSignedUrl(fileName, 315360000)
+        
+        if (urlError || !urlData) {
+          throw new Error(`Failed to create signed URL: ${urlError?.message}`)
+        }
+        
+        insertData.image_url = urlData.signedUrl
+        insertData.content = null // Сбрасываем текстовое содержимое
+      } else {
+        // Для текстового сообщения
+        insertData.content = textContent
+        insertData.image_url = null // Сбрасываем URL изображения
+      }
+      
+      // Сохраняем в базу данных
+      const { data: dbData, error: dbError } = await supabase
+        .from('messages')
+        .insert(insertData)
+        .select()
+        .single()
+      
+      if (dbError) {
+        throw new Error(`Database insert failed: ${dbError.message || JSON.stringify(dbError)}`)
+      }
+      
+      // Генерация QR-кода
+      const viewLink = `${window.location.origin}/view/${dbData.id}`
+      const qrDataURL = await QRCode.toDataURL(viewLink, {
+        margin: 0,
+        width: 400,
+        color: {
+          dark: "#000000",
+          light: "#00000000"
+        },
+        type: 'image/png'
+      })
+      
+      // Обновляем состояние для показа модального окна с QR-кодом
+      setGeneratedLink(viewLink)
+      setQRCodeDataURL(qrDataURL)
+      setModalTitle(`${messageType === 'image' ? 'Image' : 'Text Message'} Created Successfully!`)
+      setCurrentImageId(dbData.id)
+      setShowQRModal(true)
+      
+      // Сбрасываем форму
+      setSelectedFile(null)
+      setTextContent('')
+      setDeleteAfterView(false)
+      setExpirationDays(0)
+      
+      // Обновляем список сообщений
+      loadMessages()
+    } catch (error: any) {
+      alert(`Operation failed: ${error.message || 'Unknown error'}`)
+    }
+    setUploading(false)
+  }
+
+  const showQRForImage = async (imageId: string) => {
+    try {
+      const viewLink = `${window.location.origin}/view/${imageId}`
+      // Добавляем параметры для прозрачного фона и убираем отступы
+      const qrDataURL = await QRCode.toDataURL(viewLink, {
+        margin: 0, // Убираем белые поля вокруг
+        width: 400, // Больший размер для лучшего качества
+        color: {
+          dark: "#000000",
+          light: "#00000000" // Прозрачный фон
+        },
+        type: 'image/png' // Явно указываем формат PNG
+      })
+      setGeneratedLink(viewLink)
+      setQRCodeDataURL(qrDataURL)
+      setModalTitle(`QR Code for Image ${imageId}`)
+      setCurrentImageId(imageId)
+      setShowQRModal(true)
+    } catch (error) {
+      alert('Failed to generate QR code')
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      // Убрали алерт по запросу пользователя
+    } catch (error) {
+      console.error('Failed to copy:', error)
+    }
+  }
+
+  const downloadQRCode = () => {
+    const link = document.createElement('a')
+    link.href = qrCodeDataURL
+    link.download = `QR-код-${currentImageId}.png`
+    link.click()
+  }
+
+  const handleLogout = async () => {
+    if (!supabase) {
+      alert('Supabase client is not initialized')
+      return
+    }
+    await supabase.auth.signOut()
+    router.push('/signin')
+  }
+
+  const deleteRecord = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this record?')) return
+    if (!supabase) {
+      alert('Supabase client is not initialized')
+      return
+    }
+    try {
+      const { error } = await supabase.from('messages').delete().eq('id', id)
+      if (error) {
+        alert('Failed to delete record')
+      } else {
+        alert('Record deleted successfully')
+        loadMessages()
+      }
+    } catch (error) {
+      alert('Failed to delete record')
+    }
+  }
+
+  const forceCloseModal = () => {
+    setShowQRModal(false)
+    setGeneratedLink('')
+    setQRCodeDataURL('')
+    setModalTitle('')
+    setCurrentImageId('')
+  }
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') forceCloseModal()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString()
+    } catch (e) {
+      return dateString
+    }
+  }
+
+  // В секции заголовков таблицы добавляем столбец для email
+  const emailHeader = (
+    <th 
+      style={{ 
+        padding: '12px', 
+        textAlign: 'left', 
+        backgroundColor: 'transparent',
+        color: '#d1d5db',
+        fontWeight: '600',
+        borderBottom: '2px solid #374151',
+        borderTop: '1px solid #374151',
+        cursor: 'default'
+      }}
+    >
+      Viewer Email
+    </th>
+  )
+
+  // В секции строк таблицы добавляем ячейку для email
+  const emailCell = (record: any, index: number) => (
+    <td style={{ 
+      padding: '12px',
+      borderBottom: index === messages.length - 1 ? '1px solid #374151' : 'none',
+      fontFamily: 'monospace',
+      fontSize: '13px'
+    }}>
+      {record.viewer_email ? (
+        <span style={{ color: '#60a5fa' }}>{record.viewer_email}</span>
+      ) : (
+        <span style={{ color: '#9ca3af' }}>Not viewed yet</span>
+      )}
+    </td>
+  )
+
   if (loading) {
     return (
       <div style={{
@@ -434,9 +670,7 @@ export default function AdminNewPage() {
       <div style={{ 
         marginBottom: '30px', 
         padding: '25px', 
-        background: 'linear-gradient(to bottom right, #1e293b, #111827)',
-        borderRadius: '12px',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+        boxShadow: 'none'
       }}>
         <h2 style={{ 
           marginBottom: '20px', 
@@ -445,26 +679,93 @@ export default function AdminNewPage() {
           fontWeight: '600',
           borderBottom: '1px solid #374151',
           paddingBottom: '10px'
-        }}>Upload Image</h2>
-        
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Select Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-            style={{ 
-              display: 'block', 
-              width: '100%',
-              backgroundColor: '#1f2937',
-              color: 'white',
-              padding: '10px',
+        }}>Create New Message</h2>
+
+        {/* Переключатель типа сообщения */}
+        <div style={{ 
+          marginBottom: '20px',
+          display: 'flex',
+          gap: '15px'
+        }}>
+          <button
+            onClick={() => setMessageType('image')}
+            style={{
+              padding: '12px 20px',
               borderRadius: '8px',
-              border: '1px solid #374151'
+              border: 'none',
+              backgroundColor: messageType === 'image' ? '#3b82f6' : '#1f2937',
+              color: 'white',
+              fontWeight: messageType === 'image' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
             }}
-          />
+          >
+            Upload Image
+          </button>
+          <button
+            onClick={() => setMessageType('text')}
+            style={{
+              padding: '12px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: messageType === 'text' ? '#3b82f6' : '#1f2937',
+              color: 'white',
+              fontWeight: messageType === 'text' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Create Text Message
+          </button>
         </div>
-        
+
+        {/* Форма для изображения */}
+        {messageType === 'image' && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Select Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              style={{ 
+                display: 'block', 
+                width: '100%',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                padding: '10px',
+                borderRadius: '8px',
+                border: '1px solid #374151'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Форма для текстового сообщения */}
+        {messageType === 'text' && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Message Text</label>
+            <textarea
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              style={{ 
+                display: 'block', 
+                width: '100%',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #374151',
+                minHeight: '150px',
+                fontSize: '16px',
+                fontFamily: 'sans-serif',
+                resize: 'vertical'
+              }}
+              placeholder="Enter your message here..."
+            />
+          </div>
+        )}
+
+        {/* Остальные настройки - общие для обоих типов сообщений */}
         <div style={{ 
           marginBottom: '20px',
           display: 'flex',
@@ -519,8 +820,10 @@ export default function AdminNewPage() {
         </div>
         
         <button
-          onClick={handleFileUpload}
-          disabled={!selectedFile || uploading}
+          onClick={handleMessageSubmit}
+          disabled={(messageType === 'image' && !selectedFile) || 
+                    (messageType === 'text' && !textContent) || 
+                    uploading}
           style={{ 
             backgroundColor: uploading ? '#4b5563' : '#3b82f6', 
             color: 'white',
@@ -552,9 +855,9 @@ export default function AdminNewPage() {
                 marginRight: '10px',
                 animation: 'spin 1s linear infinite'
               }}></span>
-              Uploading...
+              Processing...
             </span>
-          ) : 'Upload Image'}
+          ) : `${messageType === 'image' ? 'Upload Image' : 'Create Text Message'}`}
         </button>
       </div>
 
@@ -790,6 +1093,8 @@ export default function AdminNewPage() {
                     borderTopRightRadius: '8px',
                     cursor: 'default'
                   }}>Actions</th>
+                  {/* Добавляем новый заголовок для email */}
+                  {emailHeader}
                 </tr>
               </thead>
               <tbody>
@@ -1088,6 +1393,8 @@ export default function AdminNewPage() {
                         </button>
                       </div>
                     </td>
+                    {/* Ячейка для email */}
+                    {emailCell(record, index)}
                   </tr>
                 ))}
               </tbody>

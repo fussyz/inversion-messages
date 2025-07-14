@@ -91,30 +91,51 @@ export default function ViewPage() {
   // Упрощенный рендеринг - только изображение без метаданных
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      {/* Удаляем блок с обратным отсчетом */}
-      
       <div className="max-w-4xl w-full">
-        {/* Удаляем блок с заголовком и метаданными */}
-        
         <div className="flex justify-center">
           {message.image_url ? (
             <img
               src={message.image_url}
               alt="Message content"
-              className="max-w-full max-h-[90vh] object-contain" // Убрали рамку и увеличили до 90vh
+              className="max-w-full max-h-[90vh] object-contain"
               onError={() => setError('Failed to load image')}
             />
           ) : message.content ? (
-            <div className="bg-transparent p-4 max-w-2xl"> {/* Убрали рамки и фон */}
-              <p className="text-white text-lg leading-relaxed">{message.content}</p>
+            <div className="noise-container w-full max-w-2xl p-6 relative overflow-hidden">
+              {/* Текст с эффектом шума */}
+              <div className="text-pink-500 text-xl md:text-2xl font-mono relative z-10">
+                {message.content.split('\n').map((line: string, i: number) => (
+                  <p key={i} className="mb-4">{line}</p>
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="bg-transparent p-4">
+            <div className="p-4">
               <p className="text-gray-400">No content available</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* CSS для эффекта шума */}
+      <style jsx>{`
+        .noise-container {
+          position: relative;
+        }
+
+        .noise-container::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: url('data:image/svg+xml;charset=utf-8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="a"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.5 0"/></filter><rect width="100%" height="100%" filter="url(%23a)"/></svg>');
+          opacity: 0.12;
+          pointer-events: none;
+          z-index: 1;
+        }
+      `}</style>
     </div>
   )
 }
