@@ -1,167 +1,117 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import Image from 'next/image'
+import { useState, useEffect } from 'react'
+import { use } from 'react'
 
-export default function ViewPage() {
-  const [loading, setLoading] = useState(true)
+export default function ViewPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const [message, setMessage] = useState<any>(null)
-  const [error, setError] = useState('')
-  const params = useParams()
-  const id = params.id
+  const [error, setError] = useState<string>('')
 
+  // Пример загрузки сообщения (замените на реальные данные с API)
   useEffect(() => {
-    if (id) {
-      loadMessage()
-    }
+    // Симуляция загрузки: если есть image_url – выводим картинку, иначе текст
+    setMessage({
+      id,
+      // Для теста можно задавать либо content, либо image_url.
+      content: "Пример текста сообщения", // если текстовое сообщение
+      // image_url: '/test-image.png' // если сообщение с картинкой
+    })
   }, [id])
 
-  // Обработка закрытия вкладки для auto-delete
-  useEffect(() => {
-    if (!message || !message.auto_delete) return;
-
-    const handleBeforeUnload = () => {
-      try {
-        // Отправляем через sendBeacon
-        const formData = new FormData();
-        formData.append('auto_delete', 'true');
-        navigator.sendBeacon(`/api/delete/${id}`, formData);
-      } catch (error) {
-        console.error('Failed to send delete request:', error);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (message.auto_delete) {
-        handleBeforeUnload();
-      }
-    };
-  }, [message, id]);
-
-  const loadMessage = async () => {
-    try {
-      const response = await fetch(`/api/read/${id}`)
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'Message not found')
-        setLoading(false)
-        return
-      }
-
-      // Проверяем не истек ли срок действия
-      if (data.expire_at && new Date(data.expire_at) < new Date()) {
-        setError('Message has expired')
-        setLoading(false)
-        return
-      }
-
-      setMessage(data)
-      setLoading(false)
-    } catch (error) {
-      console.error('Error loading message:', error)
-      setError('Failed to load message')
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500"></div>
-          <p className="mt-4 text-purple-500">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-red-500 mb-4">Error</h1>
-          <p className="text-white text-lg">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center relative">
-      {/* Полноэкранный непрозрачный noise.gif фон */}
-      <div className="fullscreen-noise absolute top-0 left-0 w-full h-full z-0"></div>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden bg-black">
+      {/* Фон – noise.gif на всю страницу */}
+      <div className="absolute top-0 left-0 w-full h-full z-0">
+        <Image
+          src="/noise.gif"
+          alt="Noise background"
+          fill
+          className="object-cover opacity-100 pointer-events-none"
+        />
+      </div>
       
-      {/* Контейнер для центрирования контента */}
-      <div className="relative z-10 flex flex-col items-center max-w-4xl px-4">
-        {/* Само изображение */}
-        {message.image_url ? (
-          <div className="image-container">
-            <img
+      {/* Контент сообщения */}
+      <div className="relative z-10">
+        {message && message.image_url ? (
+          // Если есть изображение, выводим его в контейнере с рамкой (стили можно доработать)
+          <div className="message-container">
+            <Image
               src={message.image_url}
-              alt="Message content"
-              className="max-w-full max-h-[80vh] object-contain"
-              onError={() => setError('Failed to load image')}
+              alt={`Image for ${id}`}
+              width={800}
+              height={600}
+              className="object-contain rounded"
             />
           </div>
-        ) : message.content ? (
-          <div className="access-granted-container w-full max-w-2xl relative overflow-hidden rounded-lg">
-            <div className="text-center p-8">
-              <div className="text-pink-500 text-2xl md:text-3xl font-mono glitch-text">
-                {message.content.split('\n').map((line: string, i: number) => (
-                  <p key={i} className="mb-4">{line}</p>
-                ))}
-              </div>
+        ) : message && message.content ? (
+          // Если сообщение текстовое, используем стиль ACCESS GRANTED
+          <div className="access-granted-overlay">
+            <div className="access-granted-text">
+              <div className="access-granted-title">ACCESS GRANTED</div>
+              <div className="access-granted-subtitle">{message.content}</div>
             </div>
           </div>
         ) : (
-          <div className="p-4">
-            <p className="text-gray-400">No content available</p>
-          </div>
+          <div className="text-white">No message available</div>
         )}
       </div>
       
       <style jsx global>{`
-        body {
-          margin: 0;
-          padding: 0;
-          background-color: black;
-          overflow-x: hidden;
-        }
-        
-        .fullscreen-noise {
+        .access-granted-overlay {
+          display: flex;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
           background-image: url('/noise.gif');
           background-repeat: repeat;
-          opacity: 1;
-          pointer-events: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
         }
-        
-        .image-container {
+        .access-granted-text {
+          background: rgba(0, 0, 0, 0.85);
+          padding: 2rem 4rem;
+          border: 2px solid #ff00ff;
+          border-radius: 8px;
+          text-align: center;
+          animation: glitch 1s infinite;
+        }
+        .access-granted-title {
+          font-size: 3rem;
+          font-family: 'Courier New', monospace;
+          color: #ff00ff;
+          text-transform: uppercase;
+          margin-bottom: 1rem;
+        }
+        .access-granted-subtitle {
+          font-size: 1.5rem;
+          font-family: 'Courier New', monospace;
+          color: #ff00ff;
+        }
+        @keyframes glitch {
+          0% { clip: rect(42px, 9999px, 44px, 0); transform: skew(0.5deg); }
+          5% { clip: rect(5px, 9999px, 94px, 0); transform: skew(0.8deg); }
+          10% { clip: rect(70px, 9999px, 85px, 0); transform: skew(1deg); }
+          15% { clip: rect(15px, 9999px, 100px, 0); transform: skew(0.5deg); }
+          20% { clip: rect(65px, 9999px, 30px, 0); transform: skew(0.8deg); }
+          25% { clip: rect(45px, 9999px, 60px, 0); transform: skew(1deg); }
+          30% { clip: rect(80px, 9999px, 50px, 0); transform: skew(0.5deg); }
+          35% { clip: rect(30px, 9999px, 75px, 0); transform: skew(0.8deg); }
+          40% { clip: rect(50px, 9999px, 68px, 0); transform: skew(1deg); }
+          100% { clip: rect(42px, 9999px, 44px, 0); transform: skew(0.5deg); }
+        }
+        .message-container {
           padding: 10px;
           background-color: rgba(0, 0, 0, 0.4);
-          backdrop-filter: blur(4px);
+          border: 2px solid #ff00ff;
           border-radius: 8px;
           box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
         }
-        
-        @keyframes textShadowFlicker {
-          0% { text-shadow: 2px 0 #ff00ff, -2px 0 cyan; }
-          25% { text-shadow: 3px 0 #ff00ff, -3px 0 cyan; }
-          50% { text-shadow: 1px 0 #ff00ff, -1px 0 cyan; }
-          75% { text-shadow: 2.5px 0 #ff00ff, -2.5px 0 cyan; }
-          100% { text-shadow: 2px 0 #ff00ff, -2px 0 cyan; }
-        }
-        
-        .glitch-text {
-          animation: textShadowFlicker 3s infinite alternate;
-          color: #ff00ff;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
       `}</style>
     </div>
-  );
+  )
 }
