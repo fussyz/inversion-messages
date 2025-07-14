@@ -36,7 +36,6 @@ export default function AdminPage() {
   useEffect(() => {
     const getUser = async () => {
       try {
-        // Принудительно закрываем модал при загрузке страницы
         setShowQRModal(false)
         
         const { data: { session }, error } = await supabase.auth.getSession()
@@ -96,13 +95,11 @@ export default function AdminPage() {
       console.log('=== UPLOAD START ===')
       console.log('File:', selectedFile.name, selectedFile.size, selectedFile.type)
 
-      // Генерируем уникальное имя файла
       const fileExt = selectedFile.name.split('.').pop()
       const fileName = `images/${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
       
       console.log('Generated filename:', fileName)
       
-      // Загружаем файл в Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('images')
         .upload(fileName, selectedFile, {
@@ -117,10 +114,9 @@ export default function AdminPage() {
         throw new Error(`Storage upload failed: ${uploadError.message}`)
       }
 
-      // Получаем публичную ссылку (signed URL как у тебя)
       const { data: urlData, error: urlError } = await supabase.storage
         .from('images')
-        .createSignedUrl(fileName, 315360000) // 10 лет
+        .createSignedUrl(fileName, 315360000)
 
       console.log('Signed URL result:', { urlData, urlError })
 
@@ -128,14 +124,12 @@ export default function AdminPage() {
         throw new Error(`Failed to create signed URL: ${urlError?.message}`)
       }
 
-      // Вычисляем дату истечения
       let expireAt = null
       if (expirationDays > 0) {
         expireAt = new Date()
         expireAt.setDate(expireAt.getDate() + expirationDays)
       }
 
-      // Сохраняем в таблицу messages
       const insertData = {
         image_url: urlData.signedUrl,
         auto_delete: deleteAfterView,
@@ -161,10 +155,7 @@ export default function AdminPage() {
         throw new Error(`Database insert failed: ${dbError.message || JSON.stringify(dbError)}`)
       }
 
-      // Генерируем ссылку для просмотра
       const viewLink = `${window.location.origin}/view/${dbData.id}`
-      
-      // Генерируем QR код
       const qrDataURL = await QRCode.toDataURL(viewLink)
       
       setGeneratedLink(viewLink)
@@ -172,12 +163,10 @@ export default function AdminPage() {
       setModalTitle('Image Uploaded Successfully!')
       setShowQRModal(true)
       
-      // Очищаем форму
       setSelectedFile(null)
       setDeleteAfterView(false)
       setExpirationDays(0)
       
-      // Обновляем список
       loadMessages()
       console.log('=== UPLOAD COMPLETE ===')
       
@@ -190,7 +179,7 @@ export default function AdminPage() {
     setUploading(false)
   }
 
-  const showQRForImage = async (imageId: string) => { // Изменили тип с number на string
+  const showQRForImage = async (imageId: string) => {
     try {
       const viewLink = `${window.location.origin}/view/${imageId}`
       const qrDataURL = await QRCode.toDataURL(viewLink, {
@@ -233,7 +222,7 @@ export default function AdminPage() {
     router.push('/signin')
   }
 
-  const deleteRecord = async (id: string) => { // Изменили тип с number на string
+  const deleteRecord = async (id: string) => {
     if (!confirm('Are you sure you want to delete this record?')) {
       return
     }
@@ -277,194 +266,142 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-purple-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500"></div>
-          <p className="mt-4 text-purple-500">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto"></div>
+          <p className="mt-4 text-purple-400 text-lg">Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-purple-900 text-white">
-      {/* Фоновые элементы */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl"></div>
-      </div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto p-8">
-        {/* Заголовок */}
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
-              Admin Dashboard
-            </h1>
-            <p className="text-gray-400 text-lg">Manage your inversion messages</p>
-          </div>
+    <div className="min-h-screen p-8 bg-gradient-to-br from-gray-900 to-purple-900 text-white">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Admin Dashboard</h1>
           <button
             onClick={handleLogout}
-            className="px-8 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 font-semibold shadow-lg hover:scale-105"
+            className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all font-semibold"
           >
             Sign Out
           </button>
         </div>
-        {/* Welcome блок */}
+        
         {user && (
-          <div className="bg-gray-900/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 mb-12 shadow-2xl">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <span className="text-xl">👋</span>
-              </div>
-              <div>
-                <p className="text-xl font-semibold text-purple-300">Welcome to the admin panel!</p>
-                <p className="text-gray-400">Logged in as: <span className="font-mono text-purple-400">{user.email}</span></p>
-              </div>
-            </div>
+          <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-lg border border-purple-500/30 mb-8">
+            <p className="text-lg mb-2">Welcome to the admin panel!</p>
+            <p>Logged in as: <span className="font-mono text-purple-300">{user.email}</span></p>
           </div>
         )}
 
         {/* Панель загрузки изображений */}
-        <div className="bg-gray-900/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 mb-12 shadow-2xl">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <span className="text-xl">📤</span>
-            </div>
-            <h2 className="text-3xl font-bold text-purple-300">Upload Image</h2>
-          </div>
+        <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-lg border border-purple-500/30 mb-8">
+          <h2 className="text-2xl font-semibold mb-6 text-purple-300">Upload Image</h2>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 transition-all"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-lg font-semibold mb-3 text-purple-300">Select Image</label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={deleteAfterView}
+                    onChange={(e) => setDeleteAfterView(e.target.checked)}
+                    className="form-checkbox h-4 w-4 text-purple-600"
+                  />
+                  <span>Delete after opening</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Expiration (days, 0 = forever)
+                </label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="block w-full text-gray-300 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-base file:font-semibold file:bg-gradient-to-r file:from-purple-600 file:to-pink-600 file:text-white hover:file:from-purple-700 hover:file:to-pink-700 file:transition-all file:duration-200 file:shadow-lg"
+                  type="number"
+                  min="0"
+                  value={expirationDays}
+                  onChange={(e) => setExpirationDays(parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-purple-500 focus:outline-none"
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-800/50 p-6 rounded-xl border border-purple-500/20">
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={deleteAfterView}
-                      onChange={(e) => setDeleteAfterView(e.target.checked)}
-                      className="w-5 h-5 text-purple-600 bg-gray-700 border-purple-500 rounded focus:ring-purple-500"
-                    />
-                    <span className="text-lg font-medium">🗑️ Delete after opening</span>
-                  </label>
-                </div>
-
-                <div className="bg-gray-800/50 p-6 rounded-xl border border-purple-500/20">
-                  <label className="block text-lg font-semibold mb-3 text-purple-300">
-                    ⏰ Expiration (days, 0 = forever)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={expirationDays}
-                    onChange={(e) => setExpirationDays(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-3 bg-gray-700 border border-purple-500/30 rounded-xl text-white focus:border-purple-400 focus:outline-none text-lg"
-                  />
-                </div>
-              </div>
             </div>
 
-            <div className="flex items-end">
-              <button
-                onClick={handleFileUpload}
-                disabled={!selectedFile || uploading}
-                className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg shadow-lg hover:scale-105 disabled:hover:scale-100"
-              >
-                {uploading ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Uploading...
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center gap-3">
-                    🚀 Upload Image
-                  </div>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={handleFileUpload}
+              disabled={!selectedFile || uploading}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            >
+              {uploading ? 'Uploading...' : 'Upload Image'}
+            </button>
           </div>
         </div>
 
         {/* Таблица записей */}
-        <div className="bg-gray-900/50 backdrop-blur-sm p-8 rounded-2xl border border-purple-500/30 shadow-2xl">
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <span className="text-xl">📊</span>
-              </div>
-              <h2 className="text-3xl font-bold text-purple-300">All Records ({messages.length})</h2>
-            </div>
+        <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-lg border border-purple-500/30">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-purple-300">All Records ({messages.length})</h2>
             <button
               onClick={loadMessages}
               disabled={loadingMessages}
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 disabled:opacity-50 font-semibold shadow-lg hover:scale-105"
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
-              {loadingMessages ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Loading...
-                </div>
-              ) : (
-                '🔄 Refresh'
-              )}
+              {loadingMessages ? 'Loading...' : 'Refresh'}
             </button>
           </div>
           
           {loadingMessages ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-500 mx-auto mb-4"></div>
-              <p className="text-xl text-purple-300">Loading records...</p>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+              <p className="mt-2">Loading records...</p>
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="text-6xl mb-4">📭</div>
-              <p className="text-gray-400 text-xl">No records yet.</p>
-            </div>
+            <p className="text-gray-400 text-center py-8">No records yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b-2 border-purple-500/30">
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">ID</th>
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">Preview</th>
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">Settings</th>
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">QR Code</th>
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">IP Address</th>
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">Stats</th>
-                    <th className="py-4 px-6 text-purple-300 font-bold text-lg">Actions</th>
+                  <tr className="border-b border-gray-700">
+                    <th className="py-3 px-4 text-purple-300">ID</th>
+                    <th className="py-3 px-4 text-purple-300">Preview</th>
+                    <th className="py-3 px-4 text-purple-300">Settings</th>
+                    <th className="py-3 px-4 text-purple-300">QR Code</th>
+                    <th className="py-3 px-4 text-purple-300">IP Address</th>
+                    <th className="py-3 px-4 text-purple-300">Stats</th>
+                    <th className="py-3 px-4 text-purple-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((record, index) => (
-                    <tr key={record.id} className="border-b border-gray-700/50 hover:bg-purple-500/10 transition-all duration-200 group">
-                      <td className="py-4 px-6">
+                  {messages.map((record) => (
+                    <tr key={record.id} className="border-b border-gray-800 hover:bg-gray-700/50 transition-colors">
+                      <td className="py-3 px-4 text-purple-200">
                         {record.image_url ? (
                           <a 
                             href={`/view/${record.id}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 underline font-bold text-lg transition-colors"
+                            className="text-blue-400 hover:text-blue-300 underline font-bold"
                           >
                             {record.id}
                           </a>
                         ) : (
-                          <span className="font-bold text-lg">{record.id}</span>
+                          <span className="font-bold">{record.id}</span>
                         )}
                       </td>
                       
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4">
                         {record.image_url ? (
-                          <div className="w-16 h-16 border-2 border-purple-500/50 rounded-xl overflow-hidden bg-gray-800 shadow-lg hover:scale-110 transition-transform duration-200">
+                          <div className="w-12 h-12 border border-purple-500 rounded overflow-hidden bg-gray-800">
                             <img 
                               src={record.image_url} 
                               alt="Preview" 
@@ -472,32 +409,30 @@ export default function AdminPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-16 h-16 border-2 border-gray-600 rounded-xl flex items-center justify-center bg-gray-800">
-                            <span className="text-gray-400 text-2xl">❓</span>
+                          <div className="w-12 h-12 border border-gray-600 rounded flex items-center justify-center bg-gray-800">
+                            <span className="text-gray-400 text-lg">❓</span>
                           </div>
                         )}
                       </td>
                       
-                      <td className="py-4 px-6 text-gray-300">
-                        <div className="space-y-1">
-                          {record.auto_delete && <div className="text-red-400 font-medium">🗑️ Delete after view</div>}
-                          {record.expire_at && (
-                            <div className="text-yellow-400 font-medium">
-                              ⏰ Expires: {new Date(record.expire_at).toLocaleDateString()}
-                            </div>
-                          )}
-                          {record.days_to_live && (
-                            <div className="text-gray-400 font-medium">
-                              📅 Days: {record.days_to_live}
-                            </div>
-                          )}
-                          {!record.auto_delete && !record.expire_at && (
-                            <span className="text-green-400 font-medium">♾️ Permanent</span>
-                          )}
-                        </div>
+                      <td className="py-3 px-4 text-gray-300">
+                        {record.auto_delete && <div className="text-red-400">🗑️ Delete after view</div>}
+                        {record.expire_at && (
+                          <div className="text-yellow-400">
+                            ⏰ Expires: {new Date(record.expire_at).toLocaleDateString()}
+                          </div>
+                        )}
+                        {record.days_to_live && (
+                          <div className="text-gray-400">
+                            📅 Days: {record.days_to_live}
+                          </div>
+                        )}
+                        {!record.auto_delete && !record.expire_at && (
+                          <span className="text-green-400">♾️ Permanent</span>
+                        )}
                       </td>
                       
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4">
                         {record.image_url && (
                           <button
                             onClick={(e) => {
@@ -505,64 +440,51 @@ export default function AdminPage() {
                               e.stopPropagation()
                               showQRForImage(record.id)
                             }}
-                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-semibold shadow-lg hover:scale-105"
+                            className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm font-semibold"
                           >
                             📱 Show QR
                           </button>
                         )}
                       </td>
                       
-                      <td className="py-4 px-6 text-gray-300">
+                      <td className="py-3 px-4 text-gray-300">
                         {record.client_ip && (
-                          <div className="font-mono text-sm bg-gray-800 px-3 py-1 rounded-lg">🌐 {record.client_ip}</div>
+                          <div className="font-mono text-sm">🌐 {record.client_ip}</div>
                         )}
                         {record.ip_address && (
-                          <div className="font-mono text-sm bg-gray-800 px-3 py-1 rounded-lg">🌐 {record.ip_address}</div>
+                          <div className="font-mono text-sm">🌐 {record.ip_address}</div>
                         )}
                         {!record.client_ip && !record.ip_address && (
                           <span className="text-gray-500">No IP</span>
                         )}
                       </td>
                       
-                      <td className="py-4 px-6 text-gray-300">
-                        <div className="space-y-1 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>👁️</span>
-                            <span className="font-medium">{record.views || 0} views</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>📅</span>
-                            <span>{new Date(record.created_at).toLocaleDateString()}</span>
-                          </div>
-                          {record.last_read_at && (
-                            <div className="flex items-center gap-2">
-                              <span>👀</span>
-                              <span>{new Date(record.last_read_at).toLocaleDateString()}</span>
-                            </div>
-                          )}
-                          {record.is_read && (
-                            <div className="text-green-400 font-medium">✅ Read</div>
-                          )}
-                        </div>
+                      <td className="py-3 px-4 text-gray-300 text-sm">
+                        <div>👁️ Views: {record.views || 0}</div>
+                        <div>📅 {new Date(record.created_at).toLocaleDateString()}</div>
+                        {record.last_read_at && (
+                          <div>👀 {new Date(record.last_read_at).toLocaleDateString()}</div>
+                        )}
+                        {record.is_read && (
+                          <div className="text-green-400">✅ Read</div>
+                        )}
                       </td>
                       
-                      <td className="py-4 px-6">
-                        <div className="space-y-2">
-                          {record.image_url && (
-                            <button
-                              onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
-                              className="block w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-semibold shadow-lg hover:scale-105"
-                            >
-                              📋 Copy Link
-                            </button>
-                          )}
+                      <td className="py-3 px-4 space-y-1">
+                        {record.image_url && (
                           <button
-                            onClick={() => deleteRecord(record.id)}
-                            className="block w-full px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 text-sm font-semibold shadow-lg hover:scale-105"
+                            onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
+                            className="block w-full px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
                           >
-                            🗑️ Delete
+                            📋 Copy Link
                           </button>
-                        </div>
+                        )}
+                        <button
+                          onClick={() => deleteRecord(record.id)}
+                          className="block w-full px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                        >
+                          🗑️ Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -576,79 +498,66 @@ export default function AdminPage() {
       {/* Модальное окно с QR кодом */}
       {showQRModal && qrCodeDataURL && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
           onClick={forceCloseModal}
         >
           <div 
-            className="bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 p-8 rounded-3xl border border-purple-500/50 shadow-2xl max-w-lg w-full mx-4 relative animate-in zoom-in duration-300"
+            className="bg-gray-900 p-8 rounded-2xl border border-purple-500 shadow-2xl max-w-md w-full mx-4 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 p-[1px]">
-              <div className="h-full w-full rounded-3xl bg-gray-900"></div>
+            <button
+              onClick={forceCloseModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold hover:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
+            >
+              ✕
+            </button>
+            
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-purple-400 mb-2">{modalTitle}</h3>
+              <div className="w-16 h-1 bg-purple-500 mx-auto rounded"></div>
             </div>
             
-            <div className="relative z-10">
+            <div className="text-center mb-6">
+              <div className="bg-white p-4 rounded-lg inline-block shadow-lg">
+                <img 
+                  src={qrCodeDataURL} 
+                  alt="QR Code" 
+                  className="w-48 h-48 block"
+                />
+              </div>
+              <p className="text-gray-300 mt-3 text-sm">Scan with your phone camera</p>
+            </div>
+            
+            <div className="space-y-3">
               <button
-                onClick={forceCloseModal}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold hover:bg-purple-500/20 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200 hover:scale-110"
+                onClick={downloadQRCode}
+                className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
               >
-                ✕
+                💾 Download QR Code
               </button>
               
-              <div className="text-center mb-8 pt-4">
-                <div className="mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">📱</span>
-                  </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={generatedLink}
+                  readOnly
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-purple-500 focus:outline-none cursor-pointer text-sm"
+                  onClick={(e) => {
+                    (e.target as HTMLInputElement).select()
+                    copyToClipboard(generatedLink)
+                  }}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-purple-400 text-xs">📋 Click to copy</span>
                 </div>
-                <h3 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                  {modalTitle}
-                </h3>
-                <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full"></div>
               </div>
               
-              <div className="text-center mb-8">
-                <div className="bg-white p-6 rounded-2xl inline-block shadow-2xl border-4 border-purple-100">
-                  <img 
-                    src={qrCodeDataURL} 
-                    alt="QR Code" 
-                    className="w-56 h-56 block"
-                  />
-                </div>
-                <p className="text-purple-300 mt-4 text-lg font-medium">Scan with your phone camera</p>
-              </div>
-              
-              <div className="space-y-4">
-                <button
-                  onClick={downloadQRCode}
-                  className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-semibold text-lg flex items-center justify-center gap-3 hover:scale-105 shadow-lg"
-                >
-                  💾 Download QR Code
-                </button>
-                
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={generatedLink}
-                    readOnly
-                    className="w-full px-6 py-4 bg-gray-800/50 border border-purple-500/30 rounded-xl text-white focus:border-purple-400 focus:outline-none cursor-pointer text-base backdrop-blur-sm"
-                    onClick={(e) => {
-                      (e.target as HTMLInputElement).select()
-                      copyToClipboard(generatedLink)
-                    }}
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                    <span className="text-purple-400 text-sm font-medium">📋 Click to copy</span>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={forceCloseModal}
-                  className="w-full py-4 bg-gray-700/50 text-white rounded-xl hover:bg-gray-600/50 transition-all duration-200 font-semibold text-lg backdrop-blur-sm"
-                >
-                  Close
-                </button>
-              </div>
+              <button
+                onClick={forceCloseModal}
+                className="w-full py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
