@@ -18,8 +18,6 @@ export default function AdminPage() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
-  const [images, setImages] = useState<any[]>([])
-  const [loadingImages, setLoadingImages] = useState(false)
   
   // Состояния для загрузки изображений
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -53,7 +51,6 @@ export default function AdminPage() {
         if (session.user?.email) {
           setUser({ email: session.user.email })
           loadMessages()
-          loadImages()
         }
         setLoading(false)
       } catch (error) {
@@ -76,31 +73,13 @@ export default function AdminPage() {
       if (error) {
         console.error('Error loading messages:', error)
       } else {
+        console.log('Loaded data from messages table:', data)
         setMessages(data || [])
       }
     } catch (error) {
       console.error('Error:', error)
     }
     setLoadingMessages(false)
-  }
-
-  const loadImages = async () => {
-    setLoadingImages(true)
-    try {
-      const { data, error } = await supabase
-        .from('images')
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      if (error) {
-        console.error('Error loading images:', error)
-      } else {
-        setImages(data || [])
-      }
-    } catch (error) {
-      console.error('Error:', error)
-    }
-    setLoadingImages(false)
   }
 
   const handleFileUpload = async () => {
@@ -111,11 +90,14 @@ export default function AdminPage() {
 
     setUploading(true)
     try {
-      console.log('Starting upload...')
+      console.log('=== UPLOAD START ===')
+      console.log('File:', selectedFile.name, selectedFile.size, selectedFile.type)
 
       // Генерируем уникальное имя файла
       const fileExt = selectedFile.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
+      const fileName = `images/${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
+      
+      console.log('Generated filename:', fileName)
       
       // Загружаем файл в Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -125,41 +107,56 @@ export default function AdminPage() {
           upsert: false
         })
 
+      console.log('Storage upload result:', { uploadData, uploadError })
+
       if (uploadError) {
-        console.error('Upload error:', uploadError)
-        throw new Error(`Upload failed: ${uploadError.message}`)
+        console.error('Storage upload error:', uploadError)
+        throw new Error(`Storage upload failed: ${uploadError.message}`)
       }
 
-      // Получаем публичную ссылку
-      const { data: urlData } = supabase.storage
+      // Получаем публичную ссылку (signed URL как у тебя)
+      const { data: urlData, error: urlError } = await supabase.storage
         .from('images')
-        .getPublicUrl(fileName)
+        .createSignedUrl(fileName, 315360000) // 10 лет
+
+      console.log('Signed URL result:', { urlData, urlError })
+
+      if (urlError || !urlData) {
+        throw new Error(`Failed to create signed URL: ${urlError?.message}`)
+      }
 
       // Вычисляем дату истечения
-      let expiresAt = null
+      let expireAt = null
       if (expirationDays > 0) {
-        expiresAt = new Date()
-        expiresAt.setDate(expiresAt.getDate() + expirationDays)
+        expireAt = new Date()
+        expireAt.setDate(expireAt.getDate() + expirationDays)
       }
 
-      // Сохраняем информацию о файле в базе данных
+      // Сохраняем в таблицу messages
       const insertData = {
-        filename: fileName,
-        original_name: selectedFile.name,
-        url: urlData.publicUrl,
-        delete_after_view: deleteAfterView,
-        expires_at: expiresAt?.toISOString() || null
+        image_url: urlData.signedUrl,
+        auto_delete: deleteAfterView,
+        expire_at: expireAt?.toISOString() || null,
+        days_to_live: expirationDays > 0 ? expirationDays : null,
+        views: 0,
+        is_read: false,
+        created_at: new Date().toISOString()
       }
+
+      console.log('=== INSERTING TO DATABASE ===')
+      console.log('Insert data:', insertData)
 
       const { data: dbData, error: dbError } = await supabase
-        .from('images')
+        .from('messages')
         .insert(insertData)
         .select()
         .single()
 
+      console.log('DB insert result:', { dbData, dbError })
+
       if (dbError) {
-        console.error('DB error:', dbError)
-        throw new Error(`Database error: ${dbError.message}`)
+        console.error('DB insert error details:', dbError)
+        throw new Error(`Database insert failed: ${dbError.message || JSON.stringify(dbError)}`)
       }
 
       // Генерируем ссылку для просмотра
@@ -178,12 +175,14 @@ export default function AdminPage() {
       setDeleteAfterView(false)
       setExpirationDays(0)
       
-      // Обновляем список изображений
-      loadImages()
-      console.log('Upload successful!')
+      // Обновляем список
+      loadMessages()
+      console.log('=== UPLOAD COMPLETE ===')
       
     } catch (error: any) {
-      console.error('Upload error:', error)
+      console.error('=== UPLOAD FAILED ===')
+      console.error('Full error object:', error)
+      console.error('Error message:', error.message)
       alert(`Upload failed: ${error.message || 'Unknown error'}`)
     }
     setUploading(false)
@@ -195,6 +194,7 @@ export default function AdminPage() {
     
     setGeneratedLink(viewLink)
     setQRCodeDataURL(qrDataURL)
+    setModalTitle('QR Code for Image')
     setShowQRModal(true)
   }
 
@@ -302,95 +302,10 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Таблица изображений */}
-        <div className="bg-gray-900 p-6 rounded-lg border border-purple-500 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">Uploaded Images ({images.length})</h2>
-            <button
-              onClick={loadImages}
-              disabled={loadingImages}
-              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50"
-            >
-              {loadingImages ? 'Loading...' : 'Refresh'}
-            </button>
-          </div>
-          
-          {loadingImages ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-              <p className="mt-2">Loading images...</p>
-            </div>
-          ) : images.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No images uploaded yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="py-3 px-4 text-purple-300">ID</th>
-                    <th className="py-3 px-4 text-purple-300">Filename</th>
-                    <th className="py-3 px-4 text-purple-300">Settings</th>
-                    <th className="py-3 px-4 text-purple-300">QR Code</th>
-                    <th className="py-3 px-4 text-purple-300">View Link</th>
-                    <th className="py-3 px-4 text-purple-300">Created At</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {images.map((image) => (
-                    <tr key={image.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
-                      <td className="py-3 px-4 text-purple-200">
-                        <a 
-                          href={`/view/${image.id}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 underline"
-                        >
-                          {image.id}
-                        </a>
-                      </td>
-                      <td className="py-3 px-4 text-white">{image.original_name}</td>
-                      <td className="py-3 px-4 text-gray-300">
-                        {image.delete_after_view && <span className="text-red-400">Delete after view</span>}
-                        {image.expires_at && (
-                          <div className="text-yellow-400">
-                            Expires: {new Date(image.expires_at).toLocaleDateString()}
-                          </div>
-                        )}
-                        {!image.delete_after_view && !image.expires_at && (
-                          <span className="text-green-400">Permanent</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => showQRForImage(image.id)}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                        >
-                          Show QR
-                        </button>
-                      </td>
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => copyToClipboard(`${window.location.origin}/view/${image.id}`)}
-                          className="text-blue-400 hover:text-blue-300 underline"
-                        >
-                          Copy Link
-                        </button>
-                      </td>
-                      <td className="py-3 px-4 text-gray-300">
-                        {new Date(image.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Таблица старых сообщений */}
+        {/* Единая таблица для всех записей из messages */}
         <div className="bg-gray-900 p-6 rounded-lg border border-purple-500">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">Messages ({messages.length})</h2>
+            <h2 className="text-2xl font-semibold">All Records ({messages.length})</h2>
             <button
               onClick={loadMessages}
               disabled={loadingMessages}
@@ -403,33 +318,115 @@ export default function AdminPage() {
           {loadingMessages ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-              <p className="mt-2">Loading messages...</p>
+              <p className="mt-2">Loading records...</p>
             </div>
           ) : messages.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No messages yet.</p>
+            <p className="text-gray-400 text-center py-8">No records yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-700">
                     <th className="py-3 px-4 text-purple-300">ID</th>
+                    <th className="py-3 px-4 text-purple-300">Type</th>
                     <th className="py-3 px-4 text-purple-300">Content</th>
-                    <th className="py-3 px-4 text-purple-300">IP Address</th>
-                    <th className="py-3 px-4 text-purple-300">Created At</th>
+                    <th className="py-3 px-4 text-purple-300">Settings</th>
+                    <th className="py-3 px-4 text-purple-300">Actions</th>
+                    <th className="py-3 px-4 text-purple-300">Stats</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((message) => (
-                    <tr key={message.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
-                      <td className="py-3 px-4 text-purple-200">{message.id}</td>
-                      <td className="py-3 px-4 max-w-xs">
-                        <div className="truncate text-white" title={message.content}>
-                          {message.content}
-                        </div>
+                  {messages.map((record) => (
+                    <tr key={record.id} className="border-b border-gray-800 hover:bg-gray-800 transition-colors">
+                      <td className="py-3 px-4 text-purple-200">
+                        {record.image_url ? (
+                          <a 
+                            href={`/view/${record.id}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline"
+                          >
+                            {record.id}
+                          </a>
+                        ) : (
+                          record.id
+                        )}
                       </td>
-                      <td className="py-3 px-4 text-gray-300">{message.ip_address || 'N/A'}</td>
+                      <td className="py-3 px-4 text-white">
+                        {record.image_url ? (
+                          <span className="text-green-400">🖼️ Image</span>
+                        ) : record.content ? (
+                          <span className="text-blue-400">💬 Text</span>
+                        ) : (
+                          <span className="text-gray-400">❓ Unknown</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {record.image_url ? (
+                          <a 
+                            href={record.image_url} 
+                            target="_blank" 
+                            className="text-blue-400 hover:underline"
+                          >
+                            View Image
+                          </a>
+                        ) : record.content ? (
+                          <div className="max-w-xs truncate text-white" title={record.content}>
+                            {record.content}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">No content</span>
+                        )}
+                      </td>
                       <td className="py-3 px-4 text-gray-300">
-                        {new Date(message.created_at).toLocaleString()}
+                        {record.auto_delete && <div className="text-red-400">🗑️ Delete after view</div>}
+                        {record.expire_at && (
+                          <div className="text-yellow-400">
+                            ⏰ Expires: {new Date(record.expire_at).toLocaleDateString()}
+                          </div>
+                        )}
+                        {record.days_to_live && (
+                          <div className="text-gray-400">
+                            📅 Days: {record.days_to_live}
+                          </div>
+                        )}
+                        {!record.auto_delete && !record.expire_at && (
+                          <span className="text-green-400">♾️ Permanent</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 space-y-1">
+                        {record.image_url && (
+                          <>
+                            <button
+                              onClick={() => showQRForImage(record.id)}
+                              className="block px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                            >
+                              Show QR
+                            </button>
+                            <button
+                              onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
+                              className="block text-blue-400 hover:text-blue-300 underline text-sm"
+                            >
+                              Copy Link
+                            </button>
+                          </>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-gray-300">
+                        <div>👁️ Views: {record.views || 0}</div>
+                        <div>📅 Created: {new Date(record.created_at).toLocaleString()}</div>
+                        {record.last_read_at && (
+                          <div>👀 Last read: {new Date(record.last_read_at).toLocaleString()}</div>
+                        )}
+                        {record.client_ip && (
+                          <div>🌐 IP: {record.client_ip}</div>
+                        )}
+                        {record.ip_address && (
+                          <div>🌐 IP: {record.ip_address}</div>
+                        )}
+                        {record.is_read && (
+                          <div className="text-green-400">✅ Read</div>
+                        )}
                       </td>
                     </tr>
                   ))}
