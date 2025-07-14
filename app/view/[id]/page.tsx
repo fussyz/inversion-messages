@@ -10,19 +10,17 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState<string>('')
 
   useEffect(() => {
-    // Для теста выберите нужный вариант:
-    // Вариант для текстового сообщения:
-    /*
-    setMessage({
-      id,
-      content: "Пример текста сообщения"
-    })
-    */
-    // Вариант для сообщения с картинкой:
-    setMessage({
-      id,
-      image_url: '/test-image.png'
-    })
+    async function loadMessage() {
+      try {
+        const res = await fetch(`/api/read/${id}`)
+        if (!res.ok) throw new Error("Message not found")
+        const data = await res.json()
+        setMessage(data)
+      } catch (e: any) {
+        setError(e.message || "Error loading message")
+      }
+    }
+    loadMessage()
   }, [id])
 
   return (
@@ -39,8 +37,10 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
       
       {/* Контент сообщения */}
       <div className="relative z-10">
-        {message && message.image_url ? (
-          // Если есть изображение, выводим именно его внутри контейнера
+        {error ? (
+          <div className="text-white">{error}</div>
+        ) : message && message.image_url ? (
+          // Если есть изображение, выводим именно его в контейнере
           <div className="message-container">
             <Image
               src={message.image_url}
