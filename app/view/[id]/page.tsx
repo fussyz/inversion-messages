@@ -109,48 +109,78 @@ export default function ViewPage() {
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative">
-      {/* Фоновый шум остается полупрозрачным для всей страницы */}
+      {/* Основной фон страницы с шумом (оставляем как есть) */}
       <div className="noise-background absolute top-0 left-0 w-full h-full"></div>
-
-      <div className="max-w-4xl w-full relative z-10">
-        <div className="flex justify-center">
-          {message.image_url ? (
-            <div className="relative">
-              {/* Непрозрачный шум непосредственно под картинкой */}
-              <div className="solid-noise-background absolute top-0 left-0 w-full h-full"></div>
-              
-              {/* Эффект размытой границы вокруг картинки */}
-              <div className="image-noise-border"></div>
-              
-              {/* Контейнер для изображения с тенью */}
-              <div className="image-container relative">
+      
+      {/* Новый контейнер для изображения с рамкой в стиле терминала */}
+      <div className="max-w-5xl w-full relative z-10">
+        <div className="terminal-container p-1 md:p-2">
+          {/* Верхняя панель терминала */}
+          <div className="terminal-header px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="terminal-title text-pink-500 glitch-text text-sm md:text-base">
+                // INVERSION_VIEWER.EXE
+              </div>
+              <div className="terminal-status text-xs text-green-400 font-mono">
+                TRANSMISSION SECURE
+              </div>
+            </div>
+          </div>
+          
+          {/* Контейнер для изображения */}
+          <div className="terminal-body p-1 md:p-2 relative">
+            {/* Внутренний слой шума за изображением */}
+            <div className="solid-noise-background absolute top-0 left-0 w-full h-full"></div>
+            
+            {/* Рамка с анимированными линиями вокруг изображения */}
+            <div className="animated-border"></div>
+            
+            {/* Само изображение */}
+            {message.image_url ? (
+              <div className="image-display-container">
                 <img
                   src={message.image_url}
                   alt="Message content"
-                  className="max-w-full max-h-[90vh] object-contain relative z-20"
+                  className="max-w-full max-h-[75vh] object-contain relative z-20"
                   onError={() => setError('Failed to load image')}
                 />
+                
+                {/* Угловые декоративные элементы */}
+                <div className="corner-element top-left"></div>
+                <div className="corner-element top-right"></div>
+                <div className="corner-element bottom-left"></div>
+                <div className="corner-element bottom-right"></div>
               </div>
-            </div>
-          ) : message.content ? (
-            <div className="access-granted-container w-full max-w-2xl relative overflow-hidden rounded-lg">
-              <div className="text-center p-8">
-                <div className="text-pink-500 text-2xl md:text-3xl font-mono relative z-10 glitch-text">
-                  {message.content.split('\n').map((line: string, i: number) => (
-                    <p key={i} className="mb-4">{line}</p>
-                  ))}
+            ) : message.content ? (
+              <div className="access-granted-container w-full max-w-2xl relative overflow-hidden rounded-lg">
+                <div className="text-center p-8">
+                  <div className="text-pink-500 text-2xl md:text-3xl font-mono relative z-10 glitch-text">
+                    {message.content.split('\n').map((line: string, i: number) => (
+                      <p key={i} className="mb-4">{line}</p>
+                    ))}
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="p-4">
+                <p className="text-gray-400">No content available</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Нижняя панель терминала */}
+          <div className="terminal-footer px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-blue-400 font-mono">
+                ID: {id?.substring(0, 12)}...
+              </div>
+              <div className="terminal-indicator pulsing"></div>
             </div>
-          ) : (
-            <div className="p-4">
-              <p className="text-gray-400">No content available</p>
-            </div>
-          )}
+          </div>
         </div>
       </div>
       
-      {/* CSS для шумовых эффектов */}
+      {/* Стили для нового дизайна */}
       <style jsx global>{`
         @keyframes noise {
           0% { background-position: 0 0; }
@@ -164,52 +194,164 @@ export default function ViewPage() {
           75% { text-shadow: 2.5px 0 #ff00ff, -2.5px 0 cyan; }
           100% { text-shadow: 2px 0 #ff00ff, -2px 0 cyan; }
         }
-
-        @keyframes noiseAnimation {
-          0% { opacity: 0.3; }
-          50% { opacity: 0.5; }
-          100% { opacity: 0.3; }
+        
+        @keyframes borderFlicker {
+          0% { border-color: rgba(255, 0, 255, 0.5); }
+          25% { border-color: rgba(0, 255, 255, 0.5); }
+          50% { border-color: rgba(255, 0, 255, 0.8); }
+          75% { border-color: rgba(0, 255, 255, 0.8); }
+          100% { border-color: rgba(255, 0, 255, 0.5); }
         }
         
-        /* Полупрозрачный шум для фона страницы */
+        @keyframes pulseOpacity {
+          0% { opacity: 0.7; }
+          50% { opacity: 1; }
+          100% { opacity: 0.7; }
+        }
+        
+        @keyframes scanline {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(100%); }
+        }
+        
         .noise-background {
           background-image: url('/noise.gif');
           background-repeat: repeat;
-          animation: noise 0.2s infinite alternate, noiseAnimation 3s infinite;
+          animation: noise 0.2s infinite alternate;
           opacity: 0.4;
           pointer-events: none;
         }
         
-        /* Новый класс для непрозрачного шума под картинкой */
         .solid-noise-background {
           background-image: url('/noise.gif');
           background-repeat: repeat;
-          opacity: 1; /* Полностью непрозрачный */
+          opacity: 0.9;
           pointer-events: none;
           z-index: 10;
-          width: 100%;
-          height: 100%;
         }
         
-        .image-container {
+        .terminal-container {
+          background-color: rgba(5, 5, 15, 0.9);
+          border: 1px solid rgba(255, 0, 255, 0.5);
+          border-radius: 8px;
+          box-shadow: 
+            0 0 20px rgba(255, 0, 255, 0.3),
+            0 0 40px rgba(0, 0, 0, 0.6);
+          overflow: hidden;
+          animation: borderFlicker 3s infinite alternate;
+        }
+        
+        .terminal-header, .terminal-footer {
+          background-color: rgba(10, 10, 25, 0.9);
+          border-bottom: 1px solid rgba(255, 0, 255, 0.3);
+          font-family: monospace;
+        }
+        
+        .terminal-footer {
+          border-top: 1px solid rgba(255, 0, 255, 0.3);
+          border-bottom: none;
+        }
+        
+        .terminal-title {
+          font-weight: bold;
+          letter-spacing: 1px;
+        }
+        
+        .terminal-body {
+          background-color: rgba(0, 0, 0, 0.7);
+          min-height: 300px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           position: relative;
-          display: inline-block;
-          box-shadow: 0 0 30px rgba(255, 0, 255, 0.3);
+          overflow: hidden;
         }
         
-        .image-noise-border {
+        .terminal-body::before {
+          content: "";
           position: absolute;
-          top: -10px;
-          left: -10px;
-          right: -10px;
-          bottom: -10px;
-          background-image: url('/noise.gif');
-          background-repeat: repeat;
-          z-index: 5;
-          pointer-events: none;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: rgba(255, 255, 255, 0.1);
           opacity: 0.5;
-          border-radius: 10px;
-          filter: blur(5px);
+          z-index: 25;
+          animation: scanline 4s linear infinite;
+          pointer-events: none;
+        }
+        
+        .terminal-indicator {
+          width: 12px;
+          height: 12px;
+          background-color: #0f0;
+          border-radius: 50%;
+        }
+        
+        .pulsing {
+          animation: pulseOpacity 2s infinite;
+        }
+        
+        .image-display-container {
+          position: relative;
+          padding: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 15;
+          border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .corner-element {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          border-style: solid;
+          border-color: rgba(0, 255, 255, 0.6);
+          z-index: 30;
+        }
+        
+        .top-left {
+          top: 0;
+          left: 0;
+          border-width: 2px 0 0 2px;
+        }
+        
+        .top-right {
+          top: 0;
+          right: 0;
+          border-width: 2px 2px 0 0;
+        }
+        
+        .bottom-left {
+          bottom: 0;
+          left: 0;
+          border-width: 0 0 2px 2px;
+        }
+        
+        .bottom-right {
+          bottom: 0;
+          right: 0;
+          border-width: 0 2px 2px 0;
+        }
+        
+        .animated-border {
+          position: absolute;
+          top: 10px;
+          bottom: 10px;
+          left: 10px;
+          right: 10px;
+          border: 1px dashed rgba(0, 255, 255, 0.3);
+          z-index: 12;
+          pointer-events: none;
+        }
+        
+        .glitch-text {
+          font-family: monospace;
+          animation: textShadowFlicker 3s infinite alternate;
+          color: #ff00ff;
+          font-weight: bold;
+          letter-spacing: 1px;
         }
         
         .access-granted-container {
@@ -231,14 +373,6 @@ export default function ViewPage() {
           pointer-events: none;
           z-index: 1;
           animation: noise 8s linear infinite alternate;
-        }
-        
-        .glitch-text {
-          font-family: monospace;
-          animation: textShadowFlicker 3s infinite alternate;
-          color: #ff00ff;
-          font-weight: bold;
-          letter-spacing: 1px;
         }
       `}</style>
     </div>
