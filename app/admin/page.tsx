@@ -1,6 +1,8 @@
 // app/admin/page.tsx
 'use client'
 
+// Micro change for deployment test
+
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
