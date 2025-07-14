@@ -16,28 +16,45 @@ export default function ViewPage() {
     }
   }, [id])
 
-  // Добавляем обработчик закрытия вкладки
+  // Заменяем существующий useEffect для обработки закрытия вкладки
+
   useEffect(() => {
-    const handleTabClose = async () => {
-      if (message && message.auto_delete) {
-        try {
-          // Пытаемся отправить запрос на удаление при закрытии
-          // Синхронно - может не успеть выполниться при закрытии вкладки
-          navigator.sendBeacon(`/api/delete/${message.id}`);
-          console.log('Delete request sent on tab close')
-        } catch (error) {
-          console.error('Failed to send delete request:', error)
-        }
+    if (!message || !message.auto_delete) return;
+
+    const handleBeforeUnload = () => {
+      try {
+        // Более надежный метод с FormData для sendBeacon
+        const formData = new FormData();
+        formData.append('auto_delete', 'true');
+        
+        // Отправляем через sendBeacon (работает лучше при закрытии)
+        navigator.sendBeacon(`/api/delete/${id}`, formData);
+        
+        // Резервный метод через fetch с keepalive
+        fetch(`/api/delete/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ auto_delete: true }),
+          keepalive: true
+        }).catch(() => {});
+        
+        console.log('Delete request sent on tab close');
+      } catch (error) {
+        console.error('Failed to send delete request:', error);
       }
-    }
+    };
 
-    // Регистрируем обработчик
-    window.addEventListener('beforeunload', handleTabClose)
-
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
     return () => {
-      window.removeEventListener('beforeunload', handleTabClose)
-    }
-  }, [message])
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Также отправляем запрос на удаление при размонтировании компонента
+      if (message.auto_delete) {
+        handleBeforeUnload();
+      }
+    };
+  }, [message, id])
 
   const loadMessage = async () => {
     try {
@@ -88,26 +105,32 @@ export default function ViewPage() {
     )
   }
 
-  // Обновите компонент для добавления noise эффекта под изображениями
+  // Обновляем JSX часть для отображения изображения
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 relative">
-      {/* Добавляем шумовой фон на всю страницу */}
+      {/* Фоновый шум остается полупрозрачным для всей страницы */}
       <div className="noise-background absolute top-0 left-0 w-full h-full"></div>
 
       <div className="max-w-4xl w-full relative z-10">
         <div className="flex justify-center">
           {message.image_url ? (
-            <div className="image-container relative">
-              {/* Создаем дополнительный шумовой эффект вокруг изображения */}
+            <div className="relative">
+              {/* Непрозрачный шум непосредственно под картинкой */}
+              <div className="solid-noise-background absolute top-0 left-0 w-full h-full"></div>
+              
+              {/* Эффект размытой границы вокруг картинки */}
               <div className="image-noise-border"></div>
               
-              <img
-                src={message.image_url}
-                alt="Message content"
-                className="max-w-full max-h-[90vh] object-contain relative z-10"
-                onError={() => setError('Failed to load image')}
-              />
+              {/* Контейнер для изображения с тенью */}
+              <div className="image-container relative">
+                <img
+                  src={message.image_url}
+                  alt="Message content"
+                  className="max-w-full max-h-[90vh] object-contain relative z-20"
+                  onError={() => setError('Failed to load image')}
+                />
+              </div>
             </div>
           ) : message.content ? (
             <div className="access-granted-container w-full max-w-2xl relative overflow-hidden rounded-lg">
@@ -148,12 +171,24 @@ export default function ViewPage() {
           100% { opacity: 0.3; }
         }
         
+        /* Полупрозрачный шум для фона страницы */
         .noise-background {
           background-image: url('/noise.gif');
           background-repeat: repeat;
           animation: noise 0.2s infinite alternate, noiseAnimation 3s infinite;
           opacity: 0.4;
           pointer-events: none;
+        }
+        
+        /* Новый класс для непрозрачного шума под картинкой */
+        .solid-noise-background {
+          background-image: url('/noise.gif');
+          background-repeat: repeat;
+          opacity: 1; /* Полностью непрозрачный */
+          pointer-events: none;
+          z-index: 10;
+          width: 100%;
+          height: 100%;
         }
         
         .image-container {

@@ -372,21 +372,21 @@ export default function AdminNewPage() {
   }
 
   const deleteRecord = async (id: string) => {
-    // Убрали подтверждение
     if (!supabase) {
       alert('Supabase client is not initialized')
       return
     }
     try {
+      // Убираем подтверждение, удаляем напрямую
       const { error } = await supabase.from('messages').delete().eq('id', id)
       if (error) {
-        alert('Failed to delete record')
+        console.error('Failed to delete record:', error)
       } else {
-        // Убрали сообщение об успехе, просто обновляем список
+        // Просто обновляем список без уведомления
         loadMessages()
       }
     } catch (error) {
-      alert('Failed to delete record')
+      console.error('Error deleting record:', error)
     }
   }
 

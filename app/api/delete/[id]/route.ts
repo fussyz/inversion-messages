@@ -8,15 +8,28 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Логируем все запросы для отладки
-    console.log(`Received POST delete request for message ID: ${params.id}`);
+    console.log(`Получен запрос на удаление для ID: ${params.id}`);
     
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    // Получаем сообщение
+    // Попытаемся получить тело запроса (если оно есть)
+    let body = {};
+    try {
+      if (request.headers.get('content-type')?.includes('application/json')) {
+        body = await request.json();
+      }
+    } catch (e) {
+      // Игнорируем ошибки парсинга JSON - возможно это FormData
+      console.log('Не удалось прочитать JSON тело запроса');
+    }
+
+    // Проверка формата запроса
+    console.log('Тип содержимого:', request.headers.get('content-type'));
+    
+    // Получаем сообщение для проверки auto_delete
     const { data: message, error: fetchError } = await supabase
       .from('messages')
       .select('*')
@@ -28,9 +41,9 @@ export async function POST(
       return NextResponse.json({ error: fetchError.message }, { status: 500 })
     }
 
-    // Проверяем является ли сообщение помеченным для автоудаления
+    // Проверяем, можно ли удалить это сообщение
     if (message && message.auto_delete) {
-      console.log(`Deleting auto-delete message ${params.id}...`);
+      console.log(`Удаляем auto-delete сообщение ${params.id}...`);
       
       const { error: deleteError } = await supabase
         .from('messages')
@@ -42,10 +55,10 @@ export async function POST(
         return NextResponse.json({ error: deleteError.message }, { status: 500 })
       }
 
-      console.log(`Successfully deleted message ${params.id} on tab close`)
+      console.log(`Сообщение ${params.id} успешно удалено при закрытии вкладки`)
       return NextResponse.json({ success: true })
     } else {
-      console.log(`Message ${params.id} is not marked for auto-delete, skipping.`);
+      console.log(`Сообщение ${params.id} не помечено для автоудаления, пропускаем.`);
     }
 
     return NextResponse.json({ success: false, reason: 'Not set for auto-delete' })
