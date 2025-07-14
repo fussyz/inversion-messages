@@ -26,7 +26,7 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false)
   
   // Состояния для модального окна с QR кодом
-  const [showQRModal, setShowQRModal] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false) // Убедись что false
   const [generatedLink, setGeneratedLink] = useState('')
   const [qrCodeDataURL, setQRCodeDataURL] = useState('')
   const [modalTitle, setModalTitle] = useState('')
@@ -36,6 +36,9 @@ export default function AdminPage() {
   useEffect(() => {
     const getUser = async () => {
       try {
+        // Принудительно закрываем модал при загрузке страницы
+        setShowQRModal(false)
+        
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error || !session) {
@@ -244,6 +247,27 @@ export default function AdminPage() {
       alert('Failed to delete record')
     }
   }
+
+  // ДОБАВЬ также функцию для принудительного закрытия модала:
+
+  const forceCloseModal = () => {
+    setShowQRModal(false)
+    setGeneratedLink('')
+    setQRCodeDataURL('')
+    setModalTitle('')
+  }
+
+  // И добавь escape key listener
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        forceCloseModal()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
 
   if (loading) {
     return (
@@ -499,27 +523,37 @@ export default function AdminPage() {
       </div>
 
       {/* Модальное окно с QR кодом */}
-      {showQRModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl border-2 border-purple-500 shadow-2xl max-w-md w-full mx-4 relative">
+      {showQRModal && qrCodeDataURL && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={forceCloseModal}
+        >
+          <div 
+            className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl border-2 border-purple-500 shadow-2xl max-w-md w-full mx-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Кнопка закрытия */}
             <button
-              onClick={() => setShowQRModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold"
+              onClick={forceCloseModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold hover:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center transition-colors"
             >
               ✕
             </button>
             
             {/* Заголовок */}
             <div className="text-center mb-6">
-              <h3 className="text-3xl font-bold text-purple-400 mb-2">{modalTitle}</h3>
+              <h3 className="text-2xl font-bold text-purple-400 mb-2">{modalTitle}</h3>
               <div className="w-16 h-1 bg-purple-500 mx-auto rounded"></div>
             </div>
             
             {/* QR код */}
             <div className="text-center mb-6">
               <div className="bg-white p-4 rounded-lg inline-block shadow-lg">
-                <img src={qrCodeDataURL} alt="QR Code" className="w-48 h-48" />
+                <img 
+                  src={qrCodeDataURL} 
+                  alt="QR Code" 
+                  className="w-48 h-48 block max-w-full max-h-full"
+                />
               </div>
               <p className="text-gray-300 mt-3 text-sm">Scan with your phone camera</p>
             </div>
@@ -544,13 +578,13 @@ export default function AdminPage() {
                     copyToClipboard(generatedLink)
                   }}
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <span className="text-purple-400 text-sm">📋 Click to copy</span>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="text-purple-400 text-xs">📋 Click to copy</span>
                 </div>
               </div>
               
               <button
-                onClick={() => setShowQRModal(false)}
+                onClick={forceCloseModal}
                 className="w-full py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-semibold"
               >
                 Close
