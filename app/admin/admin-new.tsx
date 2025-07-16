@@ -584,6 +584,7 @@ export default function AdminNewPage() {
           }}></div>
           <h2 style={{ marginTop: '20px', fontWeight: '500' }}>Loading...</h2>
       </div>
+      </div>
     )
   }
 
