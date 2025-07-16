@@ -22,19 +22,15 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
     }
     loadMessage()
 
-    // Добавляем обработчик для удаления сообщения при закрытии вкладки
+    // Обработчик для удаления сообщения при закрытии вкладки
     const handleBeforeUnload = () => {
-      // Используем sendBeacon для надежной отправки запроса при закрытии страницы
       navigator.sendBeacon(`/api/delete/${id}`, JSON.stringify({}))
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
-      // Удаляем обработчик при размонтировании компонента
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      
-      // Также попытаемся удалить сообщение при размонтировании компонента
       fetch(`/api/delete/${id}`, {
         method: 'DELETE',
         headers: {
@@ -69,41 +65,49 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
     )
   }
 
-  if (message?.image_url) {
-    return (
-      <>
-        <Head>
-          <style>{`
-            body { 
-              background-color: black !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              overflow: hidden !important;
-            }
-          `}</style>
-        </Head>
-        
-        <div style={{ 
-             position: 'fixed',
-             top: 0,
-             left: 0,
-             width: '100vw', 
-             height: '100vh', 
-             backgroundColor: 'black',
-             zIndex: 1000000
-           }}>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundImage: 'url(/noise.gif)',
-            backgroundRepeat: 'repeat',
-            backgroundSize: 'auto', // Измените на 'auto' для оригинального размера
-            zIndex: 1000001
-          }}></div>
+  return (
+    <>
+      <Head>
+        <style>{`
+          @font-face {
+            font-family: 'PPNeueMontrealMono';
+            src: url('/fonts/PPNeueMontrealMono-Bold.otf') format('opentype');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+          }
           
+          body { 
+            background-color: black !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+          }
+        `}</style>
+      </Head>
+      
+      <div style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: 'black',
+          zIndex: 1000000
+        }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: 'url(/noise.gif)',
+          backgroundRepeat: 'repeat',
+          backgroundSize: 'auto',
+          zIndex: 1000001
+        }}></div>
+        
+        {message?.image_url ? (
           <div style={{
             position: 'absolute',
             top: 0,
@@ -124,69 +128,27 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
               }}
             />
           </div>
-        </div>
-      </>
-    )
-  }
-
-  return (
-    <div style={{ 
-         position: 'fixed',
-         top: 0,
-         left: 0,
-         width: '100vw', 
-         height: '100vh', 
-         backgroundColor: 'black',
-         zIndex: 1000000
-       }}>
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundImage: 'url(/noise.gif)',
-        backgroundRepeat: 'repeat',
-        backgroundSize: 'auto', // Измените на 'auto' для оригинального размера
-        zIndex: 1000001
-      }}></div>
-      
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000002
-      }}>
-        <div style={{
-          backgroundColor: 'rgba(0,0,0,0.85)',
-          padding: '2rem 4rem',
-          border: '2px solid #ff00ff',
-          borderRadius: '8px',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            fontSize: '3rem',
-            fontFamily: '"Courier New", monospace',
-            color: '#ff00ff',
-            textTransform: 'uppercase',
-            marginBottom: '1rem'
-          }}>
-            ACCESS GRANTED
+        ) : (
+          <div
+            className="access-granted-text"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000002
+            }}
+          >
+            <div className="access-granted-title">
+              {message?.content || ''}
+            </div>
           </div>
-          <div style={{
-            fontSize: '1.5rem',
-            fontFamily: '"Courier New", monospace',
-            color: '#ff00ff'
-          }}>
-            {message?.content || 'No content available'}
-          </div>
-        </div>
+        )}
       </div>
-    </div>
+    </>
   )
 }
