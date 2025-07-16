@@ -8,62 +8,41 @@ export default function ViewPage({ params }: { params: Promise<{ id: string }> }
   const { id } = use(params)
   const [message, setMessage] = useState<any>(null)
   const [error, setError] = useState<string>('')
-  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    // Добавляем черный overlay на всю страницу
-    const overlay = document.createElement('div')
-    overlay.id = 'black-overlay'
-    overlay.style.position = 'fixed'
-    overlay.style.top = '0'
-    overlay.style.left = '0'
-    overlay.style.width = '100%'
-    overlay.style.height = '100%'
-    overlay.style.backgroundColor = 'black'
-    overlay.style.zIndex = '999999'
-    document.body.appendChild(overlay)
-    
     async function loadMessage() {
       try {
         const res = await fetch(`/api/read/${id}`)
         if (!res.ok) throw new Error("Message not found")
         const data = await res.json()
-        console.log("API response:", data) // Для отладки
         setMessage(data)
       } catch (e: any) {
-        console.error("Error:", e) // Для отладки
         setError(e.message || "Error loading message")
-      } finally {
-        setLoaded(true)
       }
     }
     loadMessage()
-    
+
+    // Добавляем обработчик для удаления сообщения при закрытии вкладки
+    const handleBeforeUnload = () => {
+      // Используем sendBeacon для надежной отправки запроса при закрытии страницы
+      navigator.sendBeacon(`/api/delete/${id}`, JSON.stringify({}))
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
     return () => {
-      // Удаляем overlay при размонтировании
-      const overlayElement = document.getElementById('black-overlay')
-      if (overlayElement) document.body.removeChild(overlayElement)
+      // Удаляем обработчик при размонтировании компонента
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      
+      // Также попытаемся удалить сообщение при размонтировании компонента
+      fetch(`/api/delete/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).catch(e => console.error('Error deleting message:', e))
     }
   }, [id])
-
-  if (!loaded) {
-    return (
-      <div style={{ 
-           position: 'fixed',
-           top: 0,
-           left: 0,
-           width: '100vw', 
-           height: '100vh', 
-           backgroundColor: 'black',
-           zIndex: 1000000,
-           display: 'flex',
-           alignItems: 'center',
-           justifyContent: 'center'
-         }}>
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500"></div>
-      </div>
-    )
-  }
 
   if (error) {
     return (

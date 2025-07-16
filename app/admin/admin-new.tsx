@@ -1,6 +1,4 @@
-'use client'
-
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import QRCode from 'qrcode'
@@ -47,6 +45,12 @@ export default function AdminNewPage() {
   const [messageType, setMessageType] = useState<'image' | 'text'>('image')
   const [textContent, setTextContent] = useState('')
 
+  // Новые состояния для настройки QR-кода
+  const [qrDarkColor, setQrDarkColor] = useState('#000000')
+  const [qrBgColor, setQrBgColor] = useState('#ffffff')
+  const [qrLogo, setQrLogo] = useState<File | null>(null)
+  const [qrLogoPreview, setQrLogoPreview] = useState<string>('')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -60,10 +64,15 @@ export default function AdminNewPage() {
         }
 
         setShowQRModal(false)
+        if (!supabase) {
+          setError('Supabase client is not initialized. Check environment variables.')
+          setLoading(false)
+          return
+        }
         const { data: { session }, error } = await supabase.auth.getSession()
         if (error) {
           console.error('Auth error:', error)
-          setError('Authentication error: ' + error.message)
+          setError('Authentication error: ' + (error?.message || String(error)))
           setLoading(false)
           return
         }
@@ -73,6 +82,10 @@ export default function AdminNewPage() {
           return
         }
         
+        if (!session) {
+          router.push('/signin')
+          return
+        }
         if (session.user?.email !== 'semoo.smm@gmail.com') {
           router.push('/signin')
           return
@@ -210,14 +223,6 @@ export default function AdminNewPage() {
 
 
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') forceCloseModal()
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [])
-
   const handleMessageSubmit = async () => {
     if (!supabase) {
       alert('Supabase client is not initialized')
@@ -324,18 +329,80 @@ export default function AdminNewPage() {
     setUploading(false)
   }
 
-  const showQRForImage = async (imageId: string) => {
+  // Функция для добавления логотипа на QR-код
+  const addLogoToQR = (qrDataURL: string, logoFile: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const qrImage = new Image()
+      const logoImage = new Image()
+      
+      qrImage.onload = () => {
+        canvas.width = qrImage.width
+        canvas.height = qrImage.height
+        ctx!.drawImage(qrImage, 0, 0)
+        
+        // Конвертация файла логотипа в URL
+        const logoURL = URL.createObjectURL(logoFile)
+        
+        logoImage.onload = () => {
+          // Размер логотипа (~25% от размера QR-кода)
+          const logoSize = qrImage.width * 0.25
+          const logoX = (qrImage.width - logoSize) / 2
+          const logoY = (qrImage.height - logoSize) / 2
+          
+          // Добавляем белый фон под логотипом
+          ctx!.fillStyle = '#ffffff'
+          ctx!.fillRect(logoX - 5, logoY - 5, logoSize + 10, logoSize + 10)
+          
+          // Рисуем логотип
+          ctx!.drawImage(logoImage, logoX, logoY, logoSize, logoSize)
+          
+          // Конвертируем canvas обратно в dataURL
+          const resultDataURL = canvas.toDataURL('image/png')
+          URL.revokeObjectURL(logoURL)
+          resolve(resultDataURL)
+        }
+        
+        logoImage.onerror = reject
+        logoImage.src = logoURL
+      }
+      
+      qrImage.onerror = reject
+      qrImage.src = qrDataURL
+    })
+  }
+
+  // Обновленная функция генерации QR-кода
+  const generateQRCode = async (url: string) => {
     try {
-      const viewLink = `${window.location.origin}/view/${imageId}`
-      const qrDataURL = await QRCode.toDataURL(viewLink, {
-        margin: 0, // Убираем отступы вокруг QR-кода
+      const qrDataURL = await QRCode.toDataURL(url, {
+        margin: 0,
         width: 400,
         color: {
-          dark: "#000000", // Черный цвет для точек
-          light: "#00000000" // Прозрачный фон (полностью прозрачный)
+          dark: qrDarkColor,
+          light: qrBgColor === 'transparent' ? '#00000000' : qrBgColor
         },
         type: 'image/png'
       })
+      
+      // Если выбран логотип, добавляем его на QR-код
+      if (qrLogo) {
+        const qrWithLogo = await addLogoToQR(qrDataURL, qrLogo)
+        return qrWithLogo
+      }
+      
+      return qrDataURL
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+      throw error
+    }
+  }
+
+  const showQRForImage = async (imageId: string) => {
+    try {
+      const viewLink = `${window.location.origin}/view/${imageId}`
+      const qrDataURL = await generateQRCode(viewLink)
       setGeneratedLink(viewLink)
       setQRCodeDataURL(qrDataURL)
       setModalTitle(`QR Code for Image ${imageId}`)
@@ -398,14 +465,6 @@ export default function AdminNewPage() {
     setCurrentImageId('')
   }
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') forceCloseModal()
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [])
-
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString)
@@ -441,13 +500,67 @@ export default function AdminNewPage() {
       fontFamily: 'monospace',
       fontSize: '13px'
     }}>
-      {record.viewer_email ? (
-        <span style={{ color: '#60a5fa' }}>{record.viewer_email}</span>
+      {record.email ? (
+        <span style={{ color: '#60a5fa' }}>{record.email}</span>
       ) : (
         <span style={{ color: '#9ca3af' }}>Not viewed yet</span>
       )}
     </td>
   )
+
+  // Добавьте эти состояния в начало компонента
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Добавьте функции для обработки drag-and-drop событий
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      // Проверяем, что это изображение
+      if (file.type.startsWith('image/')) {
+        setSelectedFile(file)
+        // Создаем preview
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          // Можно добавить состояние для предпросмотра, если нужно
+        }
+        reader.readAsDataURL(file)
+      } else {
+        alert('Please drop an image file')
+      }
+    }
+  }
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') forceCloseModal()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [])
 
   if (loading) {
     return (
@@ -470,7 +583,6 @@ export default function AdminNewPage() {
             animation: 'spin 1s linear infinite'
           }}></div>
           <h2 style={{ marginTop: '20px', fontWeight: '500' }}>Loading...</h2>
-        </div>
       </div>
     )
   }
@@ -642,24 +754,73 @@ export default function AdminNewPage() {
           </button>
         </div>
 
-        {/* Форма для изображения */}
+        {/* Форма для изображения с drag-and-drop */}
         {messageType === 'image' && (
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Select Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              style={{ 
-                display: 'block', 
-                width: '100%',
-                backgroundColor: '#1f2937',
-                color: 'white',
-                padding: '10px',
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Upload Image</label>
+            <div
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                border: `2px dashed ${isDragging ? '#60a5fa' : '#4b5563'}`,
                 borderRadius: '8px',
-                border: '1px solid #374151'
+                padding: '30px 20px',
+                textAlign: 'center',
+                backgroundColor: isDragging ? 'rgba(96, 165, 250, 0.1)' : '#1f2937',
+                transition: 'all 0.2s',
+                cursor: 'pointer'
               }}
-            />
+            >
+              {selectedFile ? (
+                <div style={{ 
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  <img
+                    src={URL.createObjectURL(selectedFile)}
+                    alt="Selected"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                  <button
+                    onClick={() => setSelectedFile(null)}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                    title="Remove image"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div style={{ 
+                  color: '#9ca3af',
+                  fontSize: '16px',
+                  fontWeight: '500'
+                }}>
+                  Drag and drop an image here, or click to select
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1224,7 +1385,7 @@ export default function AdminNewPage() {
                       borderBottomRightRadius: index === messages.length - 1 ? '8px' : '0'
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', justifyContent: 'flex-start' }}>
-                        {record.image_url && (
+                        {(record.image_url || record.content) && (
                           <>
                             <button
                               onClick={() => showQRForImage(record.id)}
@@ -1252,7 +1413,6 @@ export default function AdminNewPage() {
                             >
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                              </svg>
                             </button>
                             <button
                               onClick={() => copyToClipboard(`${window.location.origin}/view/${record.id}`)}
@@ -1344,7 +1504,7 @@ export default function AdminNewPage() {
             style={{
               backgroundColor: '#1f2937',
               borderRadius: '16px',
-              maxWidth: '400px',
+              maxWidth: '500px', // Увеличиваем ширину для настроек
               width: '90%',
               position: 'relative',
               boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
@@ -1421,124 +1581,241 @@ export default function AdminNewPage() {
                 />
               </div>
               
+              {/* Настройки QR-кода перемещены сюда */}
               <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#d1d5db', fontSize: '16px', marginBottom: '12px' }}>QR Code Settings</h4>
+                
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
+                      Foreground Color
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="color"
+                        value={qrDarkColor}
+                        onChange={e => setQrDarkColor(e.target.value)}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          backgroundColor: 'transparent'
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={qrDarkColor}
+                        onChange={e => setQrDarkColor(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          backgroundColor: '#111827',
+                          border: '1px solid #374151',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontSize: '14px',
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
+                      Background Color
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="color"
+                        value={qrBgColor === 'transparent' ? '#ffffff' : qrBgColor}
+                        onChange={e => setQrBgColor(e.target.value)}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          backgroundColor: 'transparent'
+                        }}
+                      />
+                      {/* Выпадающий список цветов */}
+                      <select
+                        value={qrBgColor}
+                        onChange={e => setQrBgColor(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          backgroundColor: '#111827',
+                          border: '1px solid #374151',
+                          borderRadius: '8px',
+                          color: 'white',
+                          fontSize: '14px',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        <option value="#ffffff">White</option>
+                        <option value="#000000">Black</option>
+                        <option value="transparent">Transparent</option>
+                        <option value="#f3f4f6">Gray</option>
+                        <option value="#fbbf24">Yellow</option>
+                        <option value="#3b82f6">Blue</option>
+                        <option value="#8b5cf6">Purple</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {/* Logo upload */}
+                <div style={{ marginTop: '10px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#9ca3af' }}>
+                    Logo (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files?.[0] || null
+                      setQrLogo(file)
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onloadend = () => {
+                          setQrLogoPreview(reader.result as string)
+                        }
+                        reader.readAsDataURL(file)
+                      } else {
+                        setQrLogoPreview('')
+                      }
+                    }}
+                    style={{
+                      display: 'block',
+                      backgroundColor: '#111827',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                      padding: '8px',
+                      marginBottom: '8px'
+                    }}
+                  />
+                  {qrLogoPreview && (
+                    <div style={{ marginTop: '8px' }}>
+                      <img
+                        src={qrLogoPreview}
+                        alt="Logo Preview"
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          objectFit: 'contain',
+                          borderRadius: '8px',
+                          border: '1px solid #374151'
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          setQrLogo(null)
+                          setQrLogoPreview('')
+                        }}
+                        style={{
+                          marginLeft: '12px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}
+                        title="Remove logo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* Button to regenerate QR code with new settings */}
+                <button
+                  onClick={async () => {
+                    if (generatedLink) {
+                      const newQR = await generateQRCode(generatedLink)
+                      setQRCodeDataURL(newQR)
+                    }
+                  }}
+                  style={{
+                    marginTop: '18px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 18px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#2563eb'
+                  }}
+                  onMouseLeave={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#3b82f6'
+                  }}
+                >
+                  Regenerate QR Code
+                </button>
+              </div>
+              {/* Download and copy buttons */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px', justifyContent: 'center' }}>
                 <button
                   onClick={downloadQRCode}
                   style={{
-                    width: '100%',
-                    padding: '12px',
                     backgroundColor: '#059669',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: 'pointer',
+                    padding: '10px 18px',
                     fontWeight: '600',
+                    cursor: 'pointer',
                     fontSize: '15px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = '#047857'
+                    (e.target as HTMLElement).style.backgroundColor = '#047857'
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = '#059669'
+                    (e.target as HTMLElement).style.backgroundColor = '#059669'
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download QR Code
+                  Download QR
+                </button>
+                <button
+                  onClick={() => copyToClipboard(generatedLink)}
+                  style={{
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 18px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '15px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#1d4ed8'
+                  }}
+                  onMouseLeave={e => {
+                    (e.target as HTMLElement).style.backgroundColor = '#2563eb'
+                  }}
+                >
+                  Copy Link
                 </button>
               </div>
-              
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={generatedLink}
-                  readOnly
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    paddingRight: '110px',
-                    backgroundColor: '#111827',
-                    border: '1px solid #374151',
-                    borderRadius: '8px',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontFamily: 'monospace'
-                  }}
-                  onClick={(e) => {
-                    (e.target as HTMLInputElement).select();
-                    copyToClipboard(generatedLink);
-                  }}
-                />
-                <div style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                  borderRadius: '4px',
-                  padding: '4px 8px',
-                  color: '#60a5fa',
-                  fontSize: '12px',
-                  pointerEvents: 'none'
-                }}>
-                  Click to copy
-                </div>
-              </div>
-              
-              <button
-                onClick={forceCloseModal}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#4b5563',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '15px',
-                  marginTop: '16px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = '#374151'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = '#4b5563'
-                }}
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>
       )}
-
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          @keyframes scaleIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `
-      }} />
     </div>
   )
 }
-
-// (Удалён useEffect с ошибкой: переменные message и id не определены в этом компоненте)
