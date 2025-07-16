@@ -153,8 +153,8 @@ export default function MapPage() {
 
   const getLocationFromIP = async (ip: string) => {
     try {
-      // Используем бесплатный API ip-api.com
-      const response = await fetch(`http://ip-api.com/json/${ip}`)
+      // Используем HTTPS вместо HTTP для продакшена
+      const response = await fetch(`https://ip-api.com/json/${ip}`)
       const data = await response.json()
       
       if (data.status === 'success') {
