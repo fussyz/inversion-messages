@@ -2,63 +2,72 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-function CallbackContent() {
+export default function AuthCallbackPage() {
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
-      const { data, error } = await supabase.auth.getSession();
+    const handleCallback = async () => {
+      try {
+        const { createClient } = await import("@supabase/supabase-js");
 
-      if (error) {
-        console.error("Auth error:", error);
-        router.push("/signin");
-        return;
-      }
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey =
+          process.env.NEXT_PUBLIC_SUPABASE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (data.session) {
-        const returnTo = searchParams.get("returnTo") || "/admin";
-        router.push(returnTo);
-      } else {
-        router.push("/signin");
+        if (!supabaseUrl || !supabaseKey) {
+          console.error("Missing Supabase configuration");
+          setError("Server configuration error");
+          return;
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Обработка обратного вызова аутентификации
+        const { searchParams } = new URL(window.location.href);
+        const code = searchParams.get("code");
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        }
+
+        // Проверяем сессию
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session) {
+          // Успешная аутентификация, перенаправляем в админку
+          router.push("/admin");
+        } else {
+          // Сессия не создана, возможно ошибка
+          setError("Authentication failed");
+          setTimeout(() => router.push("/signin"), 2000);
+        }
+      } catch (err) {
+        console.error("Auth callback error:", err);
+        setError("Authentication error");
+        setTimeout(() => router.push("/signin"), 2000);
       }
     };
 
-    handleAuthCallback();
-  }, [router, searchParams]);
+    handleCallback();
+  }, [router]);
 
+  // Простой UI для страницы обратного вызова
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-black text-purple-500">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
-        <p className="mt-4 text-white">Authenticating...</p>
+        {error ? (
+          <p className="text-red-500 text-xl">{error}</p>
+        ) : (
+          <p className="text-xl">Completing authentication...</p>
+        )}
       </div>
     </div>
-  );
-}
-
-export default function CallbackPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
-            <p className="mt-4 text-white">Loading...</p>
-          </div>
-        </div>
-      }
-    >
-      <CallbackContent />
-    </Suspense>
   );
 }
