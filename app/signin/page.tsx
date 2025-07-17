@@ -100,13 +100,6 @@ export default function SignInPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
           />
-          <input
-            type="password"
-            placeholder="Enter your password"
-            required
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
           {isValidEmail && (
             <button
               type="submit"
