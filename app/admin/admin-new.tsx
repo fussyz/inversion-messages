@@ -242,7 +242,7 @@ export default function AdminNewPage() {
     
     setUploading(true)
     try {
-      let insertData: any = {
+      const insertData: any = {
         auto_delete: deleteAfterView,
         days_to_live: expirationDays > 0 ? expirationDays : null,
         views: 0,

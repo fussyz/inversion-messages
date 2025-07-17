@@ -30,6 +30,7 @@ export default function AuthCallbackPage() {
         // Обработка обратного вызова аутентификации
         const { searchParams } = new URL(window.location.href);
         const code = searchParams.get("code");
+        const messageId = searchParams.get("id");
 
         if (code) {
           await supabase.auth.exchangeCodeForSession(code);
@@ -41,10 +42,27 @@ export default function AuthCallbackPage() {
         } = await supabase.auth.getSession();
 
         if (session) {
-          // Успешная аутентификация, перенаправляем в админку
-          router.push("/admin");
+          const userEmail = session.user.email;
+          if (userEmail === "semoo.smm@gmail.com") {
+            router.push("/admin");
+          } else {
+            // Сохраняем email зрителя (не админа)
+            try {
+              await fetch("/api/subscribers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: userEmail }),
+              });
+            } catch (e) {
+              console.error("Failed to save viewer email", e);
+            }
+            if (messageId) {
+              router.push(`/view/${messageId}`);
+            } else {
+              router.push("/");
+            }
+          }
         } else {
-          // Сессия не создана, возможно ошибка
           setError("Authentication failed");
           setTimeout(() => router.push("/signin"), 2000);
         }
