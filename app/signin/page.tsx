@@ -3,8 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, FormEvent, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
@@ -122,5 +121,49 @@ export default function SignInPage() {
         </div>
       </form>
     </main>
+  )
+}
+
+export function AuthCallbackPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const handleAuth = async () => {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (!supabaseUrl || !supabaseKey) return
+
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      // Проверяем сессию
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const userEmail = session.user.email
+      const messageId = searchParams.get('id')
+
+      // Добавляем email в базу (вызываем свой API)
+      await fetch('/api/save-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail })
+      })
+
+      if (userEmail === 'semoo.smm@gmail.com') {
+        router.replace('/admin')
+      } else if (messageId) {
+        router.replace(`/view/${messageId}`)
+      } else {
+        router.replace('/')
+      }
+    }
+    handleAuth()
+  }, [router, searchParams])
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-black text-purple-500">
+      <div>Завершаем авторизацию...</div>
+    </div>
   )
 }
