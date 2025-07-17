@@ -4,19 +4,39 @@ export const dynamic = 'force-dynamic'
 
 import { useState, FormEvent, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [isValidEmail, setIsValidEmail] = useState(false)
-  const [showGlitch, setShowGlitch] = useState(false)
-  const [showAccessGranted, setShowAccessGranted] = useState(false)
+  const [messageId, setMessageId] = useState('')
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const paramId = searchParams.get('messageId')
+    if (paramId) setMessageId(paramId)
+  }, [searchParams])
+
   const router = useRouter()
 
   useEffect(() => {
     setIsValidEmail(validateEmail(email))
   }, [email])
+
+  // always sign out any existing session on visiting sign-in page
+  useEffect(() => {
+    (async () => {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        await supabase.auth.signOut()
+      }
+    })()
+  }, [])
 
   const validateEmail = (email: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -29,42 +49,34 @@ export default function SignInPage() {
     setError('')
 
     try {
-      // Используем динамический импорт
       const { createClient } = await import('@supabase/supabase-js')
-      
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
+
       if (!supabaseUrl || !supabaseKey) {
         console.error('Missing Supabase configuration')
         setError('Server configuration error')
         setLoading(false)
         return
       }
-      
+
       const supabase = createClient(supabaseUrl, supabaseKey)
-      
-      const { data, error } = await supabase.auth.signInWithOtp({
+
+      // clear any stale session before sign-in
+      await supabase.auth.signOut()
+
+      const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/admin`
+          emailRedirectTo: messageId
+            ? `${window.location.origin}/auth/callback?id=${messageId}`
+            : `${window.location.origin}/auth/callback`
         }
       })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
-      setShowGlitch(true)
-      setTimeout(() => {
-        setShowGlitch(false)
-        setShowAccessGranted(true)
-        setTimeout(() => {
-          // После анимации перенаправляем на админ панель
-          router.push('/admin')
-        }, 1500)
-      }, 1000)
-
+      alert('Magic link sent. Please check your email.')
     } catch (error) {
       console.error('Error signing in:', error)
       if (error instanceof Error) {
@@ -78,21 +90,7 @@ export default function SignInPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center">
-      {/* Глитч-оверлей */}
-      {showGlitch && <div className="glitch-overlay"></div>}
-      
-      {/* ACCESS GRANTED сообщение */}
-      {showAccessGranted && (
-        <div className="access-granted-overlay">
-          <div className="access-granted-text">
-            <div className="access-granted-title">ACCESS GRANTED</div>
-            <div className="access-granted-subtitle">Link sent to your email</div>
-          </div>
-        </div>
-      )}
-      
-      {/* Основная форма */}
-      <form onSubmit={handleSignIn} className={`form-container ${showGlitch ? 'glitching' : ''} ${showAccessGranted ? 'hidden' : ''}`}>
+      <form onSubmit={handleSignIn} className="form-container">
         <div className="input-wrapper">
           <input
             type="email"
