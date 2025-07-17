@@ -3,41 +3,53 @@
 import { useState, useEffect } from 'react'
 import { use } from 'react'
 import Head from 'next/head'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Session } from '@supabase/auth-helpers-nextjs'
 
 export default function ViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [message, setMessage] = useState<any>(null)
   const [error, setError] = useState<string>('')
+  const [session, setSession] = useState<Session | null>(null)
 
   useEffect(() => {
-    async function loadMessage() {
-      try {
-        const res = await fetch(`/api/read/${id}`)
-        if (!res.ok) throw new Error("Message not found")
-        const data = await res.json()
-        setMessage(data)
-      } catch (e: any) {
-        setError(e.message || "Error loading message")
+    const supabase = createClientComponentClient()
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        window.location.href = '/signin'
+        return
       }
-    }
-    loadMessage()
+      setSession(data.session)
 
-    // Обработчик для удаления сообщения при закрытии вкладки
-    const handleBeforeUnload = () => {
-      navigator.sendBeacon(`/api/delete/${id}`, JSON.stringify({}))
-    }
+      async function loadMessage() {
+        try {
+          const res = await fetch(`/api/read/${id}`)
+          if (!res.ok) throw new Error("Message not found")
+          const data = await res.json()
+          setMessage(data)
+        } catch (e: any) {
+          setError(e.message || "Error loading message")
+        }
+      }
 
-    window.addEventListener('beforeunload', handleBeforeUnload)
+      loadMessage()
 
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      fetch(`/api/delete/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }).catch(e => console.error('Error deleting message:', e))
-    }
+      const handleBeforeUnload = () => {
+        navigator.sendBeacon(`/api/delete/${id}`, JSON.stringify({}))
+      }
+
+      window.addEventListener('beforeunload', handleBeforeUnload)
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload)
+        fetch(`/api/delete/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }).catch(e => console.error('Error deleting message:', e))
+      }
+    })
   }, [id])
 
   if (error) {
