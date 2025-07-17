@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [isValidEmail, setIsValidEmail] = useState(false)
@@ -45,9 +44,11 @@ export default function SignInPage() {
       
       const supabase = createClient(supabaseUrl, supabaseKey)
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithOtp({
         email,
-        password
+        options: {
+          emailRedirectTo: `${window.location.origin}/admin`
+        }
       })
 
       if (error) {
