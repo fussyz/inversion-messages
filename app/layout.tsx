@@ -3,9 +3,15 @@ import './globals.css';
 import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'IN:VERSION messages',
-  description: 'QR-портал для футболок',
-};
+  title: 'IN:VERSION',
+  description: 'The Inner Version of You',
+  openGraph: {
+    title: 'IN:VERSION',
+    description: 'The Inner Version of You',
+    url: 'https://www.inversion.one',
+    siteName: 'IN:VERSION',
+  },
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
